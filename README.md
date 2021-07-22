@@ -10,7 +10,7 @@ gb-chan is a Nintendo Game Boy emulator written in C++ with a graphical interfac
 The Nintendo Game Boy is a handheld video game system initially released in 1989. Its specs include an 8-bit processor running at 4.19 MHz, 8 KiB of video memory, a 160x144 resolution 2-bit monochromatic display.
 
 # Current features
-- OK-ish game compatibility.
+- OK-ish game compatibility (including MBC1, MBC2, MBC3 (untested) and MBC5 carts)
 - A listbox for displaying and selecting games.
 - Configurable input bindings.
 - Colour scheme configuration with 13 selectable predefined palettes.
