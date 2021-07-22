@@ -1,10 +1,10 @@
 # Summary
 gb-chan is a Nintendo Game Boy emulator written in C++ with a graphical interface (using wxWidgets-3). It relies on SDL2 for video, audio and input.
 
-![gb1](https://imgbox.com/pPp2HJnb)
-![gb2](https://imgbox.com/hb3IwDTb)
-![gb3](https://imgbox.com/hS1IXnGF)
-![gb4](https://imgbox.com/xTrAw66X)
+![gb1](https://thumbs2.imgbox.com/ee/bf/pPp2HJnb_t.png)
+![gb2](https://thumbs2.imgbox.com/23/90/hb3IwDTb_t.png)
+![gb3](https://thumbs2.imgbox.com/a1/36/hS1IXnGF_t.png)
+![gb4](https://thumbs2.imgbox.com/06/74/xTrAw66X_t.png)
 
 # What is the Nintendo Game Boy?
 The Nintendo Game Boy is a handheld video game system initially released in 1989. Its specs include an 8-bit processor running at 4.19 MHz, 8 KiB of video memory, a 160x144 resolution 2-bit monochromatic display.
