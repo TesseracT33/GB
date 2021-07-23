@@ -1,5 +1,6 @@
 #include "DMA.h"
 
+using namespace Util;
 
 void DMA::Reset()
 {

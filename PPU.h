@@ -14,8 +14,6 @@
 #include "Themes.h"
 #include "Utils.h"
 
-#include <chrono>
-
 class PPU final : public Serializable, public Configurable
 {
 public:

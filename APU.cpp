@@ -1,5 +1,7 @@
 #include "APU.h"
 
+using namespace Util;
+
 ///// WIP //////
 
 void APU::Initialize()

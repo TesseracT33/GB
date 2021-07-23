@@ -1,5 +1,6 @@
 #include "InputBindingsWindow.h"
 
+#define SDL_KEYCODE_NOT_FOUND -1
 
 wxBEGIN_EVENT_TABLE(InputBindingsWindow, wxFrame)
 	EVT_BUTTON(ID_RESET_KEYBOARD , InputBindingsWindow::OnResetKeyboard)

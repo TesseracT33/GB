@@ -5,8 +5,6 @@
 #include "Bus.h"
 #include "Utils.h"
 
-using namespace Util;
-
 ///// WIP //////
 
 class APU final : public Serializable

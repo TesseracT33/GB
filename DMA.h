@@ -4,8 +4,6 @@
 #include "CPU.h"
 #include "Utils.h"
 
-using namespace Util;
-
 class DMA final : public Serializable
 {
 public:

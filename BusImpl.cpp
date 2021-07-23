@@ -1,5 +1,7 @@
 #include "BusImpl.h"
 
+using namespace Util;
+
 #define IO(addr) memory.io[addr - 0xFF00]
 
 bool BusImpl::LoadBootRom(const std::string& boot_path)

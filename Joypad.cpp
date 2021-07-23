@@ -1,5 +1,6 @@
 #include "Joypad.h"
 
+using namespace Util;
 
 void Joypad::Initialize()
 {

@@ -10,8 +10,6 @@
 #include "Types.h"
 #include "Utils.h"
 
-using namespace Util;
-
 class Cartridge final : public Serializable
 {
 public:

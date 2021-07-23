@@ -1,5 +1,6 @@
 #include "Cartridge.h"
 
+using namespace Util;
 
 // used for reading to the bus for addresses in the ranges 0x0000-0x7FFF, 0xA000-0xBFFF
 u8 Cartridge::Read(u16 address)
@@ -242,13 +243,13 @@ void Cartridge::Reset()
 	RTC_0_written = false;
 	RTC_enabled = false;
 
-	for (int i = 0; i < size_cartridge; i++)
+	for (int i = 0; i < std::size(cartridge); i++)
 		cartridge[i] = 0;
-	for (int i = 0; i < size_RAM_banks; i++)
+	for (int i = 0; i < std::size(RAM_banks); i++)
 		RAM_banks[i] = 0;
-	for (int i = 0; i < size_MBC2_RAM; i++)
+	for (int i = 0; i < std::size(MBC2_RAM); i++)
 		MBC2_RAM[i] = 0;
-	for (int i = 0; i < size_RTC_RAM; i++)
+	for (int i = 0; i < std::size(RTC_memory); i++)
 		RTC_memory[i] = 0;
 }
 

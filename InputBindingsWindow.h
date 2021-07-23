@@ -8,8 +8,6 @@
 #include "Config.h"
 #include "Emulator.h"
 
-#define SDL_KEYCODE_NOT_FOUND -1
-
 class InputBindingsWindow : public wxFrame
 {
 public:
