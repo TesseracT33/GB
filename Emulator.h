@@ -49,7 +49,6 @@ public:
 
 	bool emu_is_paused = false;
 	bool emu_is_running = false;
-	bool a_game_has_been_loaded_this_session = false;
 	bool load_boot_rom = true;
 	bool render_graphics_every_system_frame = true;
 	bool emulation_speed_uncapped = false;

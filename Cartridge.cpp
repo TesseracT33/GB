@@ -234,7 +234,22 @@ void Cartridge::Write(u16 address, u8 data)
 
 void Cartridge::Reset()
 {
+	current_ROM_bank = 1;
+	current_RAM_bank = 0;
+	RAM_enabled = false;
+	RAM_RTC_mode_select = 0;
+	RTC_register_select = 0;
+	RTC_0_written = false;
+	RTC_enabled = false;
 
+	for (int i = 0; i < size_cartridge; i++)
+		cartridge[i] = 0;
+	for (int i = 0; i < size_RAM_banks; i++)
+		RAM_banks[i] = 0;
+	for (int i = 0; i < size_MBC2_RAM; i++)
+		MBC2_RAM[i] = 0;
+	for (int i = 0; i < size_RTC_RAM; i++)
+		RTC_memory[i] = 0;
 }
 
 
@@ -258,7 +273,7 @@ System::Mode Cartridge::LoadCartridge(const char* path)
 	// get the file's size and check that it's no more than 0x800000 bytes (8 MiB) in size
 	fseek(rom, 0, SEEK_END);
 	rom_size = ftell(rom);
-	if (rom_size > sizeof(cartridge))
+	if (rom_size > size_cartridge)
 	{
 		wxMessageBox("Unsupported ROM size detected; max size is 8 MiB.");
 		return System::Mode::NONE;

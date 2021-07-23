@@ -69,6 +69,7 @@ private:
 	bool RAM_RTC_mode_select = false; // 0 = RAM, 1 = RTC
 	bool RTC_0_written = false; // signifies if 0 has been written to the addr range 0x6000-0x7FFF
 	bool RTC_enabled = false;
-	u8 RTC_memory[5]{};
+	static const size_t size_RTC_RAM = 5;
+	u8 RTC_memory[size_RTC_RAM]{};
 	u8 RTC_register_select = 0;
 };

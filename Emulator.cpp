@@ -9,7 +9,7 @@ Emulator::Emulator()
 
 Emulator::~Emulator()
 {
-	if (a_game_has_been_loaded_this_session)
+	if (emu_is_running)
 		cartridge.EjectCartridge();
 }
 
@@ -67,12 +67,12 @@ void Emulator::SetupSerializableComponents()
 
 void Emulator::StartGame(wxString rom_path)
 {
-	if (a_game_has_been_loaded_this_session)
+	if (emu_is_running)
 	{
 		cartridge.EjectCartridge();
-		cartridge.Reset();
 	}
 
+	cartridge.Reset();
 	System::mode = cartridge.LoadCartridge(rom_path);
 	if (System::mode == System::Mode::NONE) return;
 	this->rom_path = rom_path;
@@ -91,16 +91,16 @@ void Emulator::StartGame(wxString rom_path)
 	}
 
 	// should always be reset before all other components below (e.g. ppu.reset() depends on bus being reset)
-	bus.Reset(load_boot_rom && boot_rom_loaded);
+	// todo: fix so that this isn't the case?
+	bus.Reset(boot_rom_loaded);
 
 	apu.Reset();
-	cpu.Reset(load_boot_rom && boot_rom_loaded);
+	cpu.Reset(boot_rom_loaded);
 	dma.Reset();
 	joypad.Reset();
 	ppu.Reset();
 	timer.Reset();
 
-	a_game_has_been_loaded_this_session = true;
 	MainLoop();
 }
 
