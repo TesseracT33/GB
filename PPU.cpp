@@ -155,7 +155,7 @@ void PPU::Update()
 }
 
 
-inline void PPU::EnterVBlank()
+void PPU::EnterVBlank()
 {
 	bg_tile_fetcher.window_line_counter = -1;
 	SetScreenMode(LCDStatus::VBlank);
@@ -164,7 +164,7 @@ inline void PPU::EnterVBlank()
 }
 
 
-inline void PPU::EnterHBlank()
+void PPU::EnterHBlank()
 {
 	SetScreenMode(LCDStatus::HBlank);
 	if (dma->HDMA_transfer_active)
@@ -173,7 +173,7 @@ inline void PPU::EnterHBlank()
 }
 
 
-inline void PPU::SetScreenMode(PPU::LCDStatus mode)
+void PPU::SetScreenMode(PPU::LCDStatus mode)
 {
 	*STAT = *STAT & ~3 | mode;
 	CheckSTATInterrupt();
@@ -612,7 +612,7 @@ void PPU::Search_OAM_for_Sprites()
 }
 
 
-inline void PPU::ClearFIFOs()
+void PPU::ClearFIFOs()
 {
 	while (!background_FIFO.empty()) background_FIFO.pop();
 	while (!sprite_FIFO.empty()) sprite_FIFO.pop();
@@ -675,7 +675,7 @@ bool PPU::CheckIfReachedWindow()
 }
 
 
-inline void PPU::PrepareForNewScanline()
+void PPU::PrepareForNewScanline()
 {
 	bg_tile_fetcher.Reset(false);
 	sprite_tile_fetcher.Reset();
@@ -688,7 +688,7 @@ inline void PPU::PrepareForNewScanline()
 }
 
 
-inline void PPU::PrepareForNewFrame()
+void PPU::PrepareForNewFrame()
 {
 	WY_equals_LY_in_current_frame = *LY == *WY;
 	rgb_arr_pos = 0;

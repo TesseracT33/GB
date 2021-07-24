@@ -19,8 +19,6 @@ class CPU final : public Serializable
 #endif
 
 public:
-	~CPU();
-
 	enum Interrupt : u8 { VBlank, STAT, Timer, Serial, Joypad };
 
 	Bus* bus;
@@ -135,45 +133,45 @@ private:
 	inline s8  Read_s8()  { return (s8)bus->Read(PC++); };
 
 	// arithmetic and logic instructions
-	inline void ADC(u8 op);
-	inline void ADD8(u8 op);
-	inline void ADD16(u16 op);
-	inline void AND(u8 op);
-	inline void CP(u8 op);
-	inline void DEC(u8& op);
-	inline void INC(u8& op);
-	inline void OR(u8 op);
-	inline void SBC(u8 op);
-	inline void SUB(u8 op);
-	inline void XOR(u8 op);
+	void ADC(u8 op);
+	void ADD8(u8 op);
+	void ADD16(u16 op);
+	void AND(u8 op);
+	void CP(u8 op);
+	void DEC(u8& op);
+	void INC(u8& op);
+	void OR(u8 op);
+	void SBC(u8 op);
+	void SUB(u8 op);
+	void XOR(u8 op);
 
 	// bit operations instructions
-	inline void BIT(u8 pos, u8* reg);
-	inline void RES(u8 pos, u8* reg);
-	inline void SET(u8 pos, u8* reg);
-	inline void SWAP(u8* reg);
+	void BIT(u8 pos, u8* reg);
+	void RES(u8 pos, u8* reg);
+	void SET(u8 pos, u8* reg);
+	void SWAP(u8* reg);
 
 	// bit shift instructions
-	inline void RL(u8* reg);
-	inline void RLC(u8* reg);
-	inline void RR(u8* reg);
-	inline void RRC(u8* reg);
-	inline void SLA(u8* reg);
-	inline void SRA(u8* reg);
-	inline void SRL(u8* reg);
+	void RL(u8* reg);
+	void RLC(u8* reg);
+	void RR(u8* reg);
+	void RRC(u8* reg);
+	void SLA(u8* reg);
+	void SRA(u8* reg);
+	void SRL(u8* reg);
 
-	inline void CALL(bool cond);
-	inline void RET(bool cond);
-	inline void JR(bool cond);
-	inline void JP(bool cond);
-	inline void RST(u16 addr);
-	inline void PushPC();
-	inline void PopPC();
+	void CALL(bool cond);
+	void RET(bool cond);
+	void JR(bool cond);
+	void JP(bool cond);
+	void RST(u16 addr);
+	void PushPC();
+	void PopPC();
 
 	// prefixed instructions
-	inline void CB(u8 opcode);
+	void CB(u8 opcode);
 
-	inline void DAA();
+	void DAA();
 
 	void IllegalOpcode(u8 opcode);
 

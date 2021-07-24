@@ -10,14 +10,6 @@ using namespace Util;
 #define HL (H << 8 | L)
 
 
-CPU::~CPU()
-{
-	#ifdef DEBUG
-		ofs.close();
-	#endif
-}
-
-
 void CPU::Initialize()
 {
 	IE = bus->ReadIOPointer(Bus::Addr::IE);
@@ -1246,7 +1238,7 @@ void CPU::ExecuteInstruction(u8 opcode)
 
 
 // Add op and carry flag to register A
-inline void CPU::ADC(u8 op)
+void CPU::ADC(u8 op)
 {
 	u16 delta = op + F_C;
 	F_N = 0;
@@ -1258,7 +1250,7 @@ inline void CPU::ADC(u8 op)
 
 
 // Add op to register A
-inline void CPU::ADD8(u8 op)
+void CPU::ADD8(u8 op)
 {
 	F_N = 0;
 	F_H = ((A & 0xF) + (op & 0xF) > 0xF); // check if overflow from bit 3
@@ -1269,7 +1261,7 @@ inline void CPU::ADD8(u8 op)
 
 
 // Add op to register HL
-inline void CPU::ADD16(u16 op)
+void CPU::ADD16(u16 op)
 {
 	F_N = 0;
 	F_H = (HL & 0xFFF) + (op & 0xFFF) > 0xFFF; // check if overflow from bit 11
@@ -1281,7 +1273,7 @@ inline void CPU::ADD16(u16 op)
 
 
 // Store bitwise AND between op and A in A
-inline void CPU::AND(u8 op)
+void CPU::AND(u8 op)
 {
 	A &= op;
 	F_Z = A == 0;
@@ -1291,7 +1283,7 @@ inline void CPU::AND(u8 op)
 }
 
 
-inline void CPU::CP(u8 op)
+void CPU::CP(u8 op)
 {
 	F_Z = A - op == 0;
 	F_N = 1;
@@ -1300,7 +1292,7 @@ inline void CPU::CP(u8 op)
 }
 
 
-inline void CPU::DEC(u8& op)
+void CPU::DEC(u8& op)
 {
 	F_N = 1;
 	F_H = (op & 0xF) == 0; // check if borrow from bit 4
@@ -1309,7 +1301,7 @@ inline void CPU::DEC(u8& op)
 }
 
 
-inline void CPU::INC(u8& op)
+void CPU::INC(u8& op)
 {
 	F_N = 0;
 	F_H = (op & 0xF) == 0xF; // check if overflow from bit 3
@@ -1318,7 +1310,7 @@ inline void CPU::INC(u8& op)
 }
 
 
-inline void CPU::OR(u8 op)
+void CPU::OR(u8 op)
 {
 	A |= op;
 	F_Z = A == 0;
@@ -1326,7 +1318,7 @@ inline void CPU::OR(u8 op)
 }
 
 
-inline void CPU::SBC(u8 op)
+void CPU::SBC(u8 op)
 {
 	u16 delta = op + F_C;
 	F_N = 1;
@@ -1337,7 +1329,7 @@ inline void CPU::SBC(u8 op)
 }
 
 
-inline void CPU::SUB(u8 op)
+void CPU::SUB(u8 op)
 {
 	F_N = 1;
 	F_H = (op & 0xF) > (A & 0xF); // check if borrow from bit 4
@@ -1347,7 +1339,7 @@ inline void CPU::SUB(u8 op)
 }
 
 
-inline void CPU::XOR(u8 op)
+void CPU::XOR(u8 op)
 {
 	A ^= op;
 	F_Z = A == 0;
@@ -1356,7 +1348,7 @@ inline void CPU::XOR(u8 op)
 
 
 // Rotate bits in register reg left through carry.
-inline void CPU::RL(u8* reg)
+void CPU::RL(u8* reg)
 {
 	bool bit7 = *reg >> 7;
 	*reg = (*reg & 0xFF >> 1) << 1 | F_C;
@@ -1366,7 +1358,7 @@ inline void CPU::RL(u8* reg)
 }
 
 
-inline void CPU::RLC(u8* reg)
+void CPU::RLC(u8* reg)
 {
 	F_C = *reg >> 7;
 	*reg = _rotl8(*reg, 1); // rotate A left one bit.
@@ -1376,7 +1368,7 @@ inline void CPU::RLC(u8* reg)
 
 
 // Rotate register reg right through carry.
-inline void CPU::RR(u8* reg)
+void CPU::RR(u8* reg)
 {
 	bool bit0 = *reg & 1u;
 	*reg = *reg >> 1 | F_C << 7;
@@ -1386,7 +1378,7 @@ inline void CPU::RR(u8* reg)
 }
 
 
-inline void CPU::RRC(u8* reg)
+void CPU::RRC(u8* reg)
 {
 	F_C = *reg & 1u;
 	*reg = _rotr8(*reg, 1); // rotate A right one bit.
@@ -1395,7 +1387,7 @@ inline void CPU::RRC(u8* reg)
 }
 
 
-inline void CPU::SLA(u8* reg)
+void CPU::SLA(u8* reg)
 {
 	F_C = *reg >> 7;
 	*reg = *reg << 1 & 0xFF;
@@ -1404,7 +1396,7 @@ inline void CPU::SLA(u8* reg)
 }
 
 
-inline void CPU::SRA(u8* reg)
+void CPU::SRA(u8* reg)
 {
 	F_C = *reg & 1u;
 	*reg = *reg >> 1 | (*reg >> 7) << 7;
@@ -1413,7 +1405,7 @@ inline void CPU::SRA(u8* reg)
 }
 
 
-inline void CPU::SRL(u8* reg)
+void CPU::SRL(u8* reg)
 {
 	F_C = *reg & 1u;
 	*reg >>= 1;
@@ -1422,7 +1414,7 @@ inline void CPU::SRL(u8* reg)
 }
 
 
-inline void CPU::BIT(u8 pos, u8* reg)
+void CPU::BIT(u8 pos, u8* reg)
 {
 	F_Z = CheckBit(reg, pos) == 0;
 	F_N = 0;
@@ -1430,19 +1422,19 @@ inline void CPU::BIT(u8 pos, u8* reg)
 }
 
 
-inline void CPU::RES(u8 pos, u8* reg)
+void CPU::RES(u8 pos, u8* reg)
 {
 	ClearBit(reg, pos);
 }
 
 
-inline void CPU::SET(u8 pos, u8* reg)
+void CPU::SET(u8 pos, u8* reg)
 {
 	SetBit(reg, pos);
 }
 
 
-inline void CPU::SWAP(u8* reg)
+void CPU::SWAP(u8* reg)
 {
 	*reg = _rotl8(*reg, 4);
 	F_Z = *reg == 0;
@@ -1450,7 +1442,7 @@ inline void CPU::SWAP(u8* reg)
 }
 
 
-inline void CPU::CB(u8 opcode)
+void CPU::CB(u8 opcode)
 {
 	u8* reg = nullptr;
 	bool reg_is_HL = false;
@@ -1494,7 +1486,7 @@ inline void CPU::CB(u8 opcode)
 }
 
 
-inline void CPU::CALL(bool cond)
+void CPU::CALL(bool cond)
 {
 	u16 newPC = Read_u16();
 	if (cond)
@@ -1506,7 +1498,7 @@ inline void CPU::CALL(bool cond)
 }
 
 
-inline void CPU::RET(bool cond)
+void CPU::RET(bool cond)
 {
 	if (cond)
 	{
@@ -1517,7 +1509,7 @@ inline void CPU::RET(bool cond)
 
 
 // Relative Jump by adding e8 to the address of the instruction following the JR
-inline void CPU::JR(bool cond)
+void CPU::JR(bool cond)
 {
 	s8 offset = Read_s8();
 	if (cond)
@@ -1528,7 +1520,7 @@ inline void CPU::JR(bool cond)
 }
 
 
-inline void CPU::JP(bool cond)
+void CPU::JP(bool cond)
 {
 	u16 word = Read_u16();
 	if (cond)
@@ -1539,7 +1531,7 @@ inline void CPU::JP(bool cond)
 }
 
 
-inline void CPU::RST(u16 addr)
+void CPU::RST(u16 addr)
 {
 	PushPC();
 	PC = addr;
@@ -1556,14 +1548,6 @@ unsigned CPU::OneInstruction()
 			instruction_counter++, (int)PC, (int)opcode, (int)SP, (int)AF, (int)BC, (int)DE, (int)HL, (int)IME, 
 			(int)bus->Read(Bus::Addr::IE), (int)bus->Read(Bus::Addr::IF), (int)bus->Read(Bus::Addr::LCDC), (int)bus->Read(Bus::Addr::STAT), (int)bus->Read(Bus::Addr::LY), (int)bus->GetCurrentRomBank());
 		ofs << buf << std::endl;
-	#endif
-
-	#ifdef DEBUG_SET
-		if (PC_set.find(PC) == PC_set.end())
-		{
-			PC_set.insert(PC);
-			PC_vec.push_back(PC);
-		}
 	#endif
 	
 	// If the previous instruction was HALT, there is a hardware bug in which PC is not incremented after the current instruction
@@ -1705,14 +1689,14 @@ void CPU::EnterSTOP()
 }
 
 
-inline void CPU::PushPC()
+void CPU::PushPC()
 {
 	bus->Write(--SP, PC >> 8);
 	bus->Write(--SP, PC & 0xFF);
 }
 
 
-inline void CPU::PopPC()
+void CPU::PopPC()
 {
 	u8 low = bus->Read(SP++);
 	u8 high = bus->Read(SP++);
@@ -1726,7 +1710,7 @@ void CPU::RequestInterrupt(CPU::Interrupt interrupt)
 }
 
 
-inline void CPU::DAA()
+void CPU::DAA()
 {
 	// https://forums.nesdev.com/viewtopic.php?t=15944
 	if (F_N)

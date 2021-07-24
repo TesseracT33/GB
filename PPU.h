@@ -195,12 +195,12 @@ private:
 	const unsigned t_cycles_per_scanline = 456;
 
 	bool CheckIfReachedWindow();
-	inline void ClearFIFOs();
-	inline void EnterVBlank();
-	inline void EnterHBlank();
-	inline void PrepareForNewFrame();
-	inline void PrepareForNewScanline();
-	inline void SetScreenMode(PPU::LCDStatus mode);
+	void ClearFIFOs();
+	void EnterVBlank();
+	void EnterHBlank();
+	void PrepareForNewFrame();
+	void PrepareForNewScanline();
+	void SetScreenMode(PPU::LCDStatus mode);
 	void FetchBackgroundTile();
 	void FetchSprite();
 	void ResetGraphics();
