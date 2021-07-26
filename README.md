@@ -36,6 +36,7 @@ The emulator passes the following tests:
 - Some games do not boot correctly if the boot rom is not booted first.
 - Controller input is not detected at all.
 - When you open the input binding window, a wxWidgets warning is displayed.
+- Regression: the Nintendo logo in the boot rom does not scroll smoothly anymore (small hickup at the same position every time).
 
 # Notes on usage
 It is recommended that you supply a boot rom (currently, some games have issues when booted without the boot rom (this will be fixed)). The boot rom for the original Game Boy should have file extension .gb and be 256 bytes in size. You can supply the emulator with it from within the GUI. 
