@@ -136,12 +136,12 @@ void PPU::Update()
 				UpdatePixelFetchers();
 			}
 		}
-		else if (*LY == 144 && t_cycle_counter == 4) // todo: where does it say that Vblank is entered 1 m-cycle after set LY = 144?
+		else if (*LY == 144 && t_cycle_counter == 3) // todo: where does it say that Vblank is entered 1 m-cycle after set LY = 144?
 		{
 			EnterVBlank();
 		}
 
-		if (t_cycle_counter == t_cycles_per_scanline * System::speed_mode - 1)
+		if (++t_cycle_counter == t_cycles_per_scanline * System::speed_mode)
 		{
 			t_cycle_counter = 0;
 			*LY = *LY == 153 ? 0 : *LY + 1;
@@ -149,8 +149,6 @@ void PPU::Update()
 			WY_equals_LY_in_current_frame |= *WY == *LY;
 			CheckSTATInterrupt();
 		}
-		else
-			t_cycle_counter++;
 	}
 }
 

@@ -35,14 +35,6 @@ void Timer::Update()
 		if (!DIV_enabled) continue;
 
 		DIV++;
-		if ((DIV & 0xFF) == 0)
-		{
-			(*DIV_bus)++;
-
-			// step the APU frame sequencer when bit 5 of upper byte of DIV becomes 1 (bit 6 in double speed mode)
-			if ((*DIV_bus & 0x20 * System::speed_mode) == 0x20 * System::speed_mode)
-				apu->Step_Frame_Sequencer();
-		}
 
 		bool AND_result = CheckBit(DIV, AND_bit_pos[AND_bit_pos_index]) && TIMA_enabled;
 		if (AND_result == 0 && prev_AND_result == 1)
@@ -55,6 +47,16 @@ void Timer::Update()
 			}
 		}
 		prev_AND_result = AND_result;
+	}
+
+	// note: the below cond can only be true if (DIV mod 4 == 0)
+	if ((DIV & 0xFF) == 0)
+	{
+		(*DIV_bus)++;
+
+		// step the APU frame sequencer when bit 5 of upper byte of DIV becomes 1 (bit 6 in double speed mode)
+		if ((*DIV_bus & 0x20 * System::speed_mode) == 0x20 * System::speed_mode)
+			apu->StepFrameSequencer();
 	}
 }
 

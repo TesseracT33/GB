@@ -11,5 +11,7 @@ public:
 	// currently unused
 	static bool SGB_available;
 
+	static const unsigned t_cycles_per_sec_base = 4194304;
+
 	static void ToggleSpeedMode();
 };
