@@ -156,43 +156,45 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 
 		case Addr::NR11: // 0xFF11
 			IO(NR11) = data;
-			apu->channel_duty_1 = data & ~0x3F;
+			apu->channel_duty_1 = (data & ~0x3F) >> 6;
 			break;
 
 		case Addr::NR14: // 0xFF14
 			IO(NR14) = data;
-			if (CheckBit(data, 7))
+			if (CheckBit(data, 7) == 1)
 				apu->Trigger(APU::Channel::CH1);
 			break;
 
 		case Addr::NR21: // 0xFF16
 			IO(NR21) = data;
-			apu->channel_duty_2 = data & ~0x3F;
+			apu->channel_duty_2 = (data & ~0x3F) >> 6;
 			break;
 
 		case Addr::NR24: // 0xFF19
 			IO(NR24) = data;
-			if (CheckBit(data, 7))
+			if (CheckBit(data, 7) == 1)
 				apu->Trigger(APU::Channel::CH2);
 			break;
 
 		case Addr::NR34: // 0xFF1E
 			IO(NR34) = data;
-			if (CheckBit(data, 7))
+			if (CheckBit(data, 7) == 1)
 				apu->Trigger(APU::Channel::CH3);
 			break;
 
 		case Addr::NR44: // 0xFF23
 			IO(NR44) = data;
-			if (CheckBit(data, 7))
+			if (CheckBit(data, 7) == 1)
 				apu->Trigger(APU::Channel::CH4);
 			break;
 
 		case Addr::NR52: // 0xFF26
-			// If bit 7 is reset, then all of the sound system is immediately shut off.
+			// If bit 7 is reset, then all of the sound system is immediately shut off, and all audio regs are cleared
 			// bits 0-3 are read-only. the rest are not used
 			IO(NR52) = IO(NR52) & 0x7F | data & 0x80;
 			apu->enabled = data & 0x80;
+			if (!apu->enabled)
+				apu->ResetAllRegisters();
 			break;
 
 		case Addr::LCDC: // 0xFF40
@@ -545,6 +547,7 @@ void BusImpl::Reset(bool execute_boot_rom)
 	if (!execute_boot_rom)
 	{
 		// https://gbdev.io/pandocs/Power_Up_Sequence.html
+		// todo: change these to Write(addr) = data
 		IO(NR10) = 0x80; IO(NR11) = 0xBF; IO(NR12) = 0xF3; IO(NR14) = 0xBF;
 		IO(NR21) = 0x3F; IO(NR24) = 0xBF; IO(NR30) = 0x7F; IO(NR31) = 0xFF;
 		IO(NR32) = 0x9F; IO(NR34) = 0xBF; IO(NR41) = 0xFF; IO(NR44) = 0xBF;

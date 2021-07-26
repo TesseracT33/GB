@@ -18,7 +18,7 @@ public:
 	u8*        NR41, *NR42, *NR43, *NR44;
 	u8* NR50, *NR51, *NR52;
 
-	enum Channel { CH1 = 0, CH2, CH3, CH4 };
+	enum Channel { CH1, CH2, CH3, CH4 };
 
 	const int SQUARE_WAVE_DUTY_TABLE[4][8] =
 	{
@@ -34,6 +34,9 @@ public:
 	u8 wave_duty_pos_3 = 0;
 	u8 channel_duty_1 = 0;
 	u8 channel_duty_2 = 0;
+
+	u8 channel_3_byte_index = 0;
+	bool channel_3_high_nibble_played = false; // todo: reset in various places
 
 	int amplitude[4]{};
 
@@ -60,12 +63,20 @@ public:
 
 		bool active = false;
 	};
-	Envelope envelope[3]{};
+	Envelope envelope[4]{}; // note: envelope[2] is not used since CH3 doesn't have envelope
 	void EnableEnvelope(Channel channel);
 	void DisableEnvelope(Channel channel);
 
 
+	void EnableLength(Channel channel);
 
+	void Trigger(Channel channel);
+
+	void ResetAllRegisters();
+
+
+private:
+	/// Sweep
 	void EnableSweep();
 	void StepSweep();
 	u16 Sweep_Compute_New_Freq();
@@ -78,16 +89,9 @@ public:
 		u8 shift = 0;
 
 		u8 timer = 0;
-		u8 shadow_freq = 0;
+		u16 shadow_freq = 0;
 	} sweep;
 
-	void EnableLength(Channel channel);
-
-	void Trigger(Channel channel);
-
-
-
-private:
 	void StepEnvelope(Channel channel);
 	void Mix_and_Pan();
 
@@ -101,6 +105,9 @@ private:
 	int sample_mod = 0;
 
 	u16 LFSR = 0;
+
+	u8 channel_3_shift[4] = { 4, 0, 1, 2 };
+	f32 channel_3_output_level[4] = { 0.0f, 1.0f, 0.5f, 0.25f };
 
 	// maps divisor codes to divisors in CH4
 	const int divisors[8] = { 8, 16, 32, 48, 64, 80, 96, 112 };

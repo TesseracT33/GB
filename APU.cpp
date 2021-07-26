@@ -57,46 +57,59 @@ void APU::Update()
 		// note: the frame sequencer is updated from the Timer class
 
 		// update channel 1
-		if (CheckBit(NR52, 0) == 1 && --frequency_timer[0] == 0)
+		if (CheckBit(NR52, CH1) == 1 && --frequency_timer[CH1] == 0)
 		{
 			u16 freq = *NR13 | (*NR14 & 7) << 8;
-			frequency_timer[0] = (2048 - freq) * 4;
+			frequency_timer[CH1] = (2048 - freq) * 4;
 			wave_duty_pos_1 = (wave_duty_pos_1 + 1) & 7;
-			amplitude[0] = SQUARE_WAVE_DUTY_TABLE[channel_duty_1][wave_duty_pos_1];
+			amplitude[CH1] = SQUARE_WAVE_DUTY_TABLE[channel_duty_1][wave_duty_pos_1];
 		}
 
 		// update channel 2
-		if (CheckBit(NR52, 1) == 1 && --frequency_timer[1] == 0)
+		if (CheckBit(NR52, CH2) == 1 && --frequency_timer[CH2] == 0)
 		{
 			u16 freq = *NR23 | (*NR24 & 7) << 8;
-			frequency_timer[1] = (2048 - freq) * 4;
+			frequency_timer[CH2] = (2048 - freq) * 4;
 			wave_duty_pos_2 = (wave_duty_pos_2 + 1) & 7;
-			amplitude[1] = SQUARE_WAVE_DUTY_TABLE[channel_duty_2][wave_duty_pos_2];
+			amplitude[CH2] = SQUARE_WAVE_DUTY_TABLE[channel_duty_2][wave_duty_pos_2];
 		}
 
 		// update channel 3
-		if (CheckBit(NR30, 7) == 1 && --frequency_timer[2] == 0)
+		if (CheckBit(NR52, CH3) == 1 && --frequency_timer[CH3] == 0)
 		{
+			// todo: where to check for channel enabled in NR52 or NR30?
 			u16 freq = *NR33 | (*NR34 & 7) << 8;
-			frequency_timer[2] = (2048 - freq) * 8;
-			wave_duty_pos_3++;
-			amplitude[2] = bus->Read(Bus::Addr::WAV_START + wave_duty_pos_3);
+			frequency_timer[CH3] = (2048 - freq) * 8;
+
+			if (CheckBit(NR30, 7) == 1)
+			{
+				wave_duty_pos_3 = (wave_duty_pos_3 + 1) & 3;
+				if (wave_duty_pos_3 == 0)
+				{
+					if (channel_3_high_nibble_played)
+						channel_3_byte_index = (channel_3_byte_index + 1) & 0xF;
+					channel_3_high_nibble_played = !channel_3_high_nibble_played;
+				}
+				u8 sample = bus->Read(Bus::Addr::WAV_START + channel_3_byte_index);
+				u8 start_pos = channel_3_high_nibble_played ? 0 : 4;
+				amplitude[CH3] = CheckBit(sample, start_pos + wave_duty_pos_3);
+			}
 		}
 
 		// update channel 4
-		if (CheckBit(NR52, 3) == 1 && --frequency_timer[3] == 0)
+		if (CheckBit(NR52, CH4) == 1 && --frequency_timer[CH4] == 0)
 		{
-			frequency_timer[3] = divisors[*NR43 & 7] << (*NR43 & 0xF0);
+			frequency_timer[CH4] = divisors[*NR43 & 7] << (*NR43 >> 4);
 
 			u8 xor_result = (LFSR & 1) ^ ((LFSR & 2) >> 1);
 			LFSR = (LFSR >> 1) | (xor_result << 14);
 			if (CheckBit(NR43, 3) == 1)
 			{
-				LFSR &= ~(1 << 6);
+				LFSR &= !(1 << 6);
 				LFSR |= xor_result << 6;
 			}
 
-			amplitude[3] = ~LFSR & 1;
+			amplitude[CH4] = ~LFSR & 1;
 		}
 
 		// Sample. To get exactly 48000 samples per second, 7 samples are taken 73 t-cycles apart.
@@ -132,9 +145,9 @@ void APU::Step_Frame_Sequencer()
 	if (fs_step_mod == 7)
 	{
 		// step volume envelope for each channel (1, 2, 4)
-		if (envelope[0].active) StepEnvelope(Channel::CH1);
-		if (envelope[1].active) StepEnvelope(Channel::CH2);
-		if (envelope[2].active) StepEnvelope(Channel::CH4);
+		if (envelope[CH1].active) StepEnvelope(CH1);
+		if (envelope[CH2].active) StepEnvelope(CH2);
+		if (envelope[CH4].active) StepEnvelope(CH4);
 	}
 
 	fs_step_mod = (fs_step_mod + 1) & 7;
@@ -144,14 +157,10 @@ void APU::Step_Frame_Sequencer()
 void APU::EnableEnvelope(Channel channel)
 {
 	// Note: channel = 0, 1, 3 (CH1, CH2, CH4). NR12, NR22, NR42 are stored in an array (BusImpl::memory),
-	//   where NR12 has index 0xFF12, NR22 has 0xFF17, NR42 has 0xFF21
+	//   where NR12 has addr 0xFF12, NR22 has 0xFF17, NR42 has 0xFF21
 	u8* NRx2 = NR12 + 5 * channel;
 
-	// looks weird, but it's to have CH4 have index 2 in array 'envelope' (Channel::CH3 == 2)
-	if (channel == Channel::CH4)
-		channel = Channel::CH3;
-
-	envelope[channel].initial_volume = *NRx2 & 0xF0;
+	envelope[channel].initial_volume = (*NRx2 & 0xF0) >> 4;
 	envelope[channel].direction = CheckBit(NRx2, 3);
 	envelope[channel].period = *NRx2 & 7;
 	envelope[channel].period_timer = envelope[channel].period;
@@ -187,7 +196,7 @@ void APU::StepEnvelope(Channel channel)
 
 void APU::EnableSweep()
 {
-	sweep.period = *NR10 & 7 << 4;
+	sweep.period = (*NR10 & 7 << 4) >> 4;
 	sweep.direction = CheckBit(NR10, 3);
 	sweep.shift = *NR10 & 7;
 
@@ -203,10 +212,11 @@ void APU::EnableSweep()
 u16 APU::Sweep_Compute_New_Freq()
 {
 	u16 new_freq = sweep.shadow_freq >> sweep.shift;
-	new_freq = sweep.direction ? sweep.shadow_freq + new_freq : sweep.shadow_freq - new_freq;
+	// sweep.direction == false means additions, == true means subtraction
+	new_freq = sweep.direction ? sweep.shadow_freq - new_freq : sweep.shadow_freq + new_freq;
 	if (new_freq >= 2048)
 	{
-		ClearBit(NR52, 0); // disable channel 1
+		ClearBit(NR52, CH1); // disable channel 1
 	}
 	return new_freq;
 }
@@ -217,22 +227,22 @@ void APU::StepSweep()
 	if (sweep.timer > 0)
 		sweep.timer--;
 
-	if (sweep.timer == 0)
-	{
-		sweep.timer = sweep.period > 0 ? sweep.period : 8;
-		if (sweep.enabled && sweep.period > 0)
-		{
-			u16 new_freq = Sweep_Compute_New_Freq();
-			if (new_freq < 2048 && sweep.shift > 0)
-			{
-				// update shadow frequency and CH1 frequency registers with new frequency
-				sweep.shadow_freq = new_freq;
-				*NR13 = new_freq & 0xFF;
-				*NR14 &= ~7;
-				*NR14 |= new_freq & 7 << 8;
+	if (sweep.timer != 0)
+		return;
 
-				Sweep_Compute_New_Freq();
-			}
+	sweep.timer = sweep.period > 0 ? sweep.period : 8;
+	if (sweep.enabled && sweep.period > 0)
+	{
+		u16 new_freq = Sweep_Compute_New_Freq();
+		if (new_freq < 2048 && sweep.shift > 0)
+		{
+			// update shadow frequency and CH1 frequency registers with new frequency
+			sweep.shadow_freq = new_freq;
+			*NR13 = new_freq & 0xFF;
+			*NR14 &= ~7;
+			*NR14 |= (new_freq & 7 << 8) >> 8;
+
+			Sweep_Compute_New_Freq();
 		}
 	}
 }
@@ -240,22 +250,46 @@ void APU::StepSweep()
 
 void APU::Mix_and_Pan()
 {
-	// todo: take into account if a channel is enabled or not (from NR52)
 	f32 right_amp = 0.0f, left_amp = 0.0f;
 
-	for (int i = 0; i < 4; i++)
-		if (CheckBit(NR51, i) == 1)
-			right_amp += amplitude[i];
-
-	for (int i = 4; i < 8; i++)
-		if (CheckBit(NR51, i) == 1)
-			left_amp += amplitude[i - 4];
+	if (CheckBit(NR52, CH1) == 1)
+	{
+		u8 ch1_output = amplitude[CH1] * (envelope[CH1].active ? envelope[CH1].current_volume : 1);
+		if (CheckBit(NR51, CH1) == 1)
+			right_amp += ch1_output;
+		if (CheckBit(NR51, CH1 + 4) == 1)
+			left_amp += ch1_output;
+	}
+	if (CheckBit(NR52, CH2) == 1)
+	{
+		u8 ch2_output = amplitude[CH2] * (envelope[CH2].active ? envelope[CH2].current_volume : 1);
+		if (CheckBit(NR51, CH2) == 1)
+			right_amp += ch2_output;
+		if (CheckBit(NR51, CH2 + 4) == 1)
+			left_amp += ch2_output;
+	}
+	if (CheckBit(NR52, CH3) == 1)
+	{
+		u8 ch3_output = amplitude[CH3] * channel_3_output_level[(*NR32 & 3 << 5) >> 5]; // not sure how this works yet
+		if (CheckBit(NR51, CH3) == 1)
+			right_amp += ch3_output;
+		if (CheckBit(NR51, CH3 + 4) == 1)
+			left_amp += ch3_output;
+	}
+	if (CheckBit(NR52, CH4) == 1)
+	{
+		u8 ch4_output = amplitude[CH4] * (envelope[CH4].active ? envelope[CH4].current_volume : 1);
+		if (CheckBit(NR51, CH4) == 1)
+			right_amp += ch4_output;
+		if (CheckBit(NR51, CH4 + 4) == 1)
+			left_amp += ch4_output;
+	}
 
 	right_amp *= 0.25f;
 	left_amp *= 0.25f;
 
 	u8 right_vol = *NR50 & 7;
-	u8 left_vol = *NR50 & 7 << 4;
+	u8 left_vol = (*NR50 & 7 << 4) >> 4;
 
 	f32 left_sample = left_vol * left_amp;
 	f32 right_sample = right_vol * right_amp;
@@ -276,9 +310,14 @@ void APU::EnableLength(Channel channel)
 {
 	// Note: channel = 0, 1, 2, 3 ((CH1, CH2, CH3, CH4)). NR11, NR21, NR31, NR41 are stored in an array (BusImpl::memory),
 	//   where NR11 has index 0xFF11, NR21 has 0xFF16, NR31 has 0xFF1B, NR41 has 0xFF20
-	if (channel == Channel::CH3)
+
+	// the length timer is reloaded only if the length timer is 0
+	if (length_timer[channel] != 0)
+		return;
+
+	if (channel == CH3)
 	{
-		length_timer[2] = 256 - *NR31;
+		length_timer[channel] = 256 - *NR31;
 	}
 	else
 	{
@@ -300,19 +339,33 @@ void APU::StepLength()
 void APU::Trigger(Channel channel)
 {
 	// note: channel = 0, 1, 2, 3 (CH1, CH2, CH3, CH4)
-	if (channel != Channel::CH3)
+
+	SetBit(NR52, channel); // enable channel
+
+	if (channel != CH3)
 		EnableEnvelope(channel);
 
-	if (channel == Channel::CH1)
+	if (channel == CH1)
 		EnableSweep();
 
 	EnableLength(channel);
 
-	LFSR = 0x7FFF; // all (15) bits are set to 1
-
-	SetBit(NR52, channel);
+	if (channel == CH4)
+		LFSR = 0x7FFF; // all (15) bits are set to 1
 
 	SetInitialFrequencyTimer(channel);
+}
+
+
+void APU::ResetAllRegisters()
+{
+	*NR10 = *NR11 = *NR12 = *NR13 = *NR14 = 0;
+	*NR21 = *NR22 = *NR23 = *NR24 = 0;
+	*NR30 = *NR31 = *NR32 = *NR33 = *NR34 = 0;
+	*NR41 = *NR42 = *NR43 = *NR44 = 0;
+	*NR50 = *NR51 = *NR52 = 0;
+
+	this->Reset();
 }
 
 
