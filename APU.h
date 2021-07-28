@@ -7,27 +7,25 @@
 
 ///// WIP //////
 
+//#define CH1_DEBUG
+
 class APU final : public Serializable
 {
+#ifdef CH1_DEBUG
+	std::ofstream ofs{ "apu_debug.txt", std::ofstream::out };
+#endif
 public:
 	enum Channel { CH1, CH2, CH3, CH4 };
 
 	Bus* bus;
 
 	bool enabled = false;
-	u8 channel_duty_1 = 0;
-	u8 channel_duty_2 = 0;
 	
 	void Initialize();
 	void Reset();
-	void ResetAllRegisters();
-	void SetEnvelopeParams(Channel channel);
-	void SetLengthParams(Channel channel);
-	void SetSweepParams();
 	void StepFrameSequencer();
-	void Trigger(Channel channel);
 	void Update();
-	void UpdateCH3DACStatus();
+	void WriteToReg(u16 addr, u8 data);
 
 	void Serialize(std::ofstream& ofs) override;
 	void Deserialize(std::ifstream& ifs) override;
@@ -69,15 +67,19 @@ private:
 	bool set_ch3_wave_pos_to_one_after_sample = false;
 	bool channel_is_enabled[4]{};
 	bool DAC_is_enabled[4]{};
+	bool length_is_enabled[4]{};
 
+	u8 ch3_output_level = 0;
+	u8 duty[2]{}; // only applies to CH1 and CH2
 	u8 frame_seq_step_counter = 0;
 	u8 sample_counter = 0;
 	u8 wave_pos[3]{}; // does not apply to CH4
 	u8 volume[4]{};
 
 	u16 LFSR = 0x7FFF;
+	u16 freq[4]{};
 	u16 freq_timer[4]{};
-	u16 length_timer[4]{};
+	u16 length_timer[4]{}; // todo: should it be u8?
 
 	unsigned sample_buffer_index = 0;
 	unsigned t_cycles_per_sample = (System::t_cycles_per_sec_base * System::speed_mode) / sample_rate; // todo: needs to be reset when speed_mode is changed
@@ -99,12 +101,13 @@ private:
 	f32 GetChannel3Amplitude();
 	f32 GetChannel4Amplitude();
 	void PrepareChannelAfterTrigger(Channel channel);
+	void ResetAllRegisters();
 	void Sample();
-	void StepChannel1();
-	void StepChannel2();
-	void StepChannel3();
-	void StepChannel4();
+	void SetEnvelopeParams(Channel channel);
+	void SetSweepParams();
+	void StepChannel(Channel channel);
 	void StepEnvelope(Channel channel);
 	void StepLength();
 	void StepSweep();
+	void Trigger(Channel channel);
 };

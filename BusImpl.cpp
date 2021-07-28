@@ -154,132 +154,35 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 			timer->TIMA_enabled = CheckBit(data, 2);
 			break;
 
-		case Addr::NR10: // 0xFF10
+		case Addr::NR10:
+		case Addr::NR11:
+		case Addr::NR12:
+		case Addr::NR13:
+		case Addr::NR14:
+		case Addr::NR21:
+		case Addr::NR22:
+		case Addr::NR23:
+		case Addr::NR24:
+		case Addr::NR30:
+		case Addr::NR31:
+		case Addr::NR32:
+		case Addr::NR33:
+		case Addr::NR34:
+		case Addr::NR41:
+		case Addr::NR42:
+		case Addr::NR43:
+		case Addr::NR44:
+		case Addr::NR50:
+		case Addr::NR51:
 			if (!apu->enabled) break;
-			IO(NR10) = data;
-			apu->SetSweepParams();
+			IO(addr) = data;
+			apu->WriteToReg(addr, data);
 			break;
 
-		case Addr::NR11: // 0xFF11
-			if (!apu->enabled) break;
-			IO(NR11) = data;
-			apu->channel_duty_1 = (data & ~0x3F) >> 6;
-			apu->SetLengthParams(APU::Channel::CH1);
-			break;
-
-		case Addr::NR12: // 0xFF12
-			if (!apu->enabled) break;
-			IO(NR12) = data;
-			apu->SetEnvelopeParams(APU::Channel::CH1);
-			break;
-
-		case Addr::NR13: // 0xFF13
-			if (!apu->enabled) break;
-			IO(NR13) = data;
-			break;
-
-		case Addr::NR14: // 0xFF14
-			if (!apu->enabled) break;
-			IO(NR14) = data;
-			if (CheckBit(data, 7) == 1)
-				apu->Trigger(APU::Channel::CH1);
-			break;
-
-		case Addr::NR21: // 0xFF16
-			if (!apu->enabled) break;
-			IO(NR21) = data;
-			apu->channel_duty_2 = (data & ~0x3F) >> 6;
-			apu->SetLengthParams(APU::Channel::CH2);
-			break;
-
-		case Addr::NR22: // 0xFF17
-			if (!apu->enabled) break;
-			IO(NR22) = data;
-			apu->SetEnvelopeParams(APU::Channel::CH2);
-			break;
-
-		case Addr::NR23: // 0xFF18
-			if (!apu->enabled) break;
-			IO(NR23) = data;
-			break;
-
-		case Addr::NR24: // 0xFF19
-			if (!apu->enabled) break;
-			IO(NR24) = data;
-			if (CheckBit(data, 7) == 1)
-				apu->Trigger(APU::Channel::CH2);
-			break;
-
-		case Addr::NR30: // 0xFF1A
-			if (!apu->enabled) break;
-			IO(NR30) = data;
-			apu->UpdateCH3DACStatus();
-			break;
-
-		case Addr::NR31: // 0xFF1B
-			if (!apu->enabled) break;
-			IO(NR31) = data;
-			apu->SetLengthParams(APU::Channel::CH3);
-			break;
-
-		case Addr::NR32: // 0xFF1C
-			if (!apu->enabled) break;
-			IO(NR32) = data;
-			break;
-
-		case Addr::NR33: // 0xFF1D
-			if (!apu->enabled) break;
-			IO(NR33) = data;
-			break;
-
-		case Addr::NR34: // 0xFF1E
-			if (!apu->enabled) break;
-			IO(NR34) = data;
-			if (CheckBit(data, 7) == 1)
-				apu->Trigger(APU::Channel::CH3);
-			break;
-
-		case Addr::NR41: // 0xFF20
-			if (!apu->enabled) break;
-			IO(NR41) = data;
-			apu->SetLengthParams(APU::Channel::CH4);
-			break;
-
-		case Addr::NR42: // 0xFF21
-			if (!apu->enabled) break;
-			IO(NR42) = data;
-			apu->SetEnvelopeParams(APU::Channel::CH4);
-			break;
-
-		case Addr::NR43: // 0xFF22
-			if (!apu->enabled) break;
-			IO(NR43) = data;
-			break;
-
-		case Addr::NR44: // 0xFF23
-			if (!apu->enabled) break;
-			IO(NR44) = data;
-			if (CheckBit(data, 7) == 1)
-				apu->Trigger(APU::Channel::CH4);
-			break;
-
-		case Addr::NR50: // 0xFF24
-			if (!apu->enabled) break;
-			IO(NR50) = data;
-			break;
-
-		case Addr::NR51: // 0xFF25
-			if (!apu->enabled) break;
-			IO(NR51) = data;
-			break;
-
-		case Addr::NR52: // 0xFF26
-			// If bit 7 is reset, then all of the sound system is immediately shut off, and all audio regs are cleared
-			// bits 0-3 are read-only. the rest are not used
+		case Addr::NR52:
+			// bits 0-3 are read-only. bit 7 is r/w. the rest are not used
 			IO(NR52) = IO(NR52) & 0x7F | data & 0x80;
-			apu->enabled = data & 0x80;
-			if (!apu->enabled)
-				apu->ResetAllRegisters();
+			apu->WriteToReg(addr, data);
 			break;
 
 		case Addr::LCDC: // 0xFF40

@@ -36,10 +36,11 @@ void APU::Initialize()
 
 void APU::Reset()
 {
+	// todo
 	audio_spec.freq = sample_rate;
 	audio_spec.format = AUDIO_F32;
 	audio_spec.channels = 2;
-	audio_spec.samples = sample_buffer_size;
+	audio_spec.samples = sample_buffer_size / 2;
 	audio_spec.callback = NULL;
 
 	SDL_AudioSpec obtainedSpec;
@@ -50,13 +51,148 @@ void APU::Reset()
 
 void APU::ResetAllRegisters()
 {
-	*NR10 = *NR11 = *NR12 = *NR13 = *NR14 = 0;
-	*NR21 = *NR22 = *NR23 = *NR24 = 0;
-	*NR30 = *NR31 = *NR32 = *NR33 = *NR34 = 0;
-	*NR41 = *NR42 = *NR43 = *NR44 = 0;
-	*NR50 = *NR51 = *NR52 = 0;
+	// zero all registers between NR10 and NR52
+	for (u8* addr = NR10; addr <= NR52; addr++)
+		*addr = 0;
 
-	this->Reset();
+	duty[CH1] = duty[CH2] = 0;
+	wave_pos[CH1] = wave_pos[CH2] = wave_pos[CH3] = 0;
+	freq_timer[CH1] = freq_timer[CH2] = freq_timer[CH3] = freq_timer[CH4] = 0;
+	// todo: what other regs to reset?
+}
+
+
+void APU::WriteToReg(u16 addr, u8 data)
+{
+	// note: once this function is called, the actual register has already been written to (with data)
+	switch (addr)
+	{
+	case Bus::Addr::NR10: // 0xFF10
+		SetSweepParams();
+		break;
+
+	case Bus::Addr::NR11: // 0xFF11
+		duty[CH1] = data >> 6;
+		length_timer[CH1] = 64 - (data & 0x3F);
+		break;
+
+	case Bus::Addr::NR12: // 0xFF12
+		SetEnvelopeParams(CH1);
+		DAC_is_enabled[CH1] = data >> 3;
+		// todo: argentum disables channel if dac is disabled
+		break;
+
+	case Bus::Addr::NR13: // 0xFF13
+		freq[CH1] &= 0x700;
+		freq[CH1] |= data;
+		break;
+
+	case Bus::Addr::NR14: // 0xFF14
+		freq[CH1] &= 0xFF;
+		freq[CH1] |= data << 8;
+
+		length_is_enabled[CH1] = data & 0x40;
+		if (length_timer[CH1] == 0)
+			length_timer[CH1] = 64;
+
+		if (CheckBit(data, 7) == 1 && DAC_is_enabled[CH1])
+			Trigger(CH1);
+
+		break;
+
+	case Bus::Addr::NR21: // 0xFF16
+		duty[CH2] = data >> 6;
+		length_timer[CH2] = 64 - (data & 0x3F);
+		break;
+
+	case Bus::Addr::NR22: // 0xFF17
+		SetEnvelopeParams(CH2);
+		DAC_is_enabled[CH2] = data >> 3;
+		break;
+
+	case Bus::Addr::NR23: // 0xFF18
+		freq[CH2] &= 0x700;
+		freq[CH2] |= data;
+		break;
+
+	case Bus::Addr::NR24: // 0xFF19
+		freq[CH2] &= 0xFF;
+		freq[CH2] |= data << 8;
+
+		length_is_enabled[CH2] = data & 0x40;
+		if (length_timer[CH2] == 0)
+			length_timer[CH2] = 64;
+
+		if (CheckBit(data, 7) == 1 && DAC_is_enabled[CH2])
+			Trigger(CH2);
+
+		break;
+
+	case Bus::Addr::NR30: // 0xFF1A
+		DAC_is_enabled[CH3] = *NR30 >> 7;
+		break;
+
+	case Bus::Addr::NR31: // 0xFF1B
+		length_timer[CH2] = 256 - data;
+		break;
+
+	case Bus::Addr::NR32: // 0xFF1C
+		ch3_output_level = (data >> 5) & 3;
+		break;
+
+	case Bus::Addr::NR33: // 0xFF1D
+		freq[CH3] &= 0x700;
+		freq[CH3] |= data;
+		break;
+
+	case Bus::Addr::NR34: // 0xFF1E
+		freq[CH3] &= 0xFF;
+		freq[CH3] |= data << 8;
+
+		length_is_enabled[CH3] = data & 0x40;
+		if (length_timer[CH3] == 0)
+			length_timer[CH3] = 256;
+
+		if (CheckBit(data, 7) == 1 && DAC_is_enabled[CH3])
+			Trigger(CH3);
+
+		break;
+
+	case Bus::Addr::NR41: // 0xFF20
+		length_timer[CH4] = 64 - (data & 0x3F);
+		break;
+
+	case Bus::Addr::NR42: // 0xFF21
+		SetEnvelopeParams(APU::Channel::CH4);
+		DAC_is_enabled[CH4] = data >> 3;
+		break;
+
+	case Bus::Addr::NR43: // 0xFF22
+		break;
+
+	case Bus::Addr::NR44: // 0xFF23
+		length_is_enabled[CH4] = data & 0x40;
+		if (length_timer[CH4] == 0)
+			length_timer[CH4] = 64;
+
+		if (CheckBit(data, 7) == 1 && DAC_is_enabled[CH4])
+			Trigger(CH4);
+
+		break;
+
+	case Bus::Addr::NR50: // 0xFF24
+		break;
+
+	case Bus::Addr::NR51: // 0xFF25
+		break;
+
+	case Bus::Addr::NR52: // 0xFF26
+		// If bit 7 is reset, then all of the sound system is immediately shut off, and all audio regs are cleared
+		this->enabled = data & 0x80;
+		if (!this->enabled)
+			ResetAllRegisters();
+		break;
+	}
 }
 
 
@@ -68,21 +204,14 @@ void APU::Update()
 	{
 		// note: the frame sequencer is updated from the Timer class
 
-		// update channel 1
-		if (--freq_timer[CH1] == 0)
-			StepChannel1();
-
-		// update channel 2
-		if (--freq_timer[CH2] == 0)
-			StepChannel2();
-
-		// update channel 3
-		if (--freq_timer[CH3] == 0)
-			StepChannel3();
-
-		// update channel 4
-		if (--freq_timer[CH4] == 0)
-			StepChannel4();
+		// update channel 1-4
+		for (int i = 0; i < 4; i++)
+		{
+			if (freq_timer[i] > 0)
+				freq_timer[i]--;
+			if (freq_timer[i] == 0)
+				StepChannel(static_cast<Channel>(i));
+		}
 
 		if (--t_cycles_until_sample == 0)
 		{
@@ -102,45 +231,52 @@ void APU::Update()
 }
 
 
-void APU::StepChannel1()
+void APU::StepChannel(Channel channel)
 {
-	u16 freq = *NR13 | (*NR14 & 7) << 8;
-	freq_timer[CH1] = (2048 - freq) * 4;
-	wave_pos[CH1] = (wave_pos[CH1] + 1) & 7;
-}
-
-
-void APU::StepChannel2()
-{
-	u16 freq = *NR23 | (*NR24 & 7) << 8;
-	freq_timer[CH2] = (2048 - freq) * 4;
-	wave_pos[CH2] = (wave_pos[CH2] + 1) & 7;
-}
-
-
-void APU::StepChannel3()
-{
-	u16 freq = *NR33 | (*NR34 & 7) << 8;
-	freq_timer[CH3] = (2048 - freq) * 2;
-	if (set_ch3_wave_pos_to_one_after_sample)
+	switch (channel)
 	{
-		wave_pos[CH3] = 1;
-		set_ch3_wave_pos_to_one_after_sample = false;
+	case CH1:
+	{
+		u16 freq = *NR13 | (*NR14 & 7) << 8;
+		freq_timer[CH1] = (2048 - freq) * 4;
+		wave_pos[CH1] = (wave_pos[CH1] + 1) & 7;
+		break;
 	}
-	else
-		wave_pos[CH3] = (wave_pos[CH3] + 1) & 31;
-}
 
-
-void APU::StepChannel4()
-{
-	freq_timer[CH4] = ch4_divisors[*NR43 & 7] << (*NR43 >> 4);
-	u8 xor_result = (LFSR & 1) ^ ((LFSR & 2) >> 1);
-	LFSR = (LFSR >> 1) | (xor_result << 14);
-	if (CheckBit(NR43, 3) == 1)
+	case CH2:
 	{
-		LFSR &= !(1 << 6);
-		LFSR |= xor_result << 6;
+		u16 freq = *NR23 | (*NR24 & 7) << 8;
+		freq_timer[CH2] = (2048 - freq) * 4;
+		wave_pos[CH2] = (wave_pos[CH2] + 1) & 7;
+		break;
+	}
+
+	case CH3:
+	{
+		u16 freq = *NR33 | (*NR34 & 7) << 8;
+		freq_timer[CH3] = (2048 - freq) * 2;
+		if (set_ch3_wave_pos_to_one_after_sample)
+		{
+			wave_pos[CH3] = 1;
+			set_ch3_wave_pos_to_one_after_sample = false;
+		}
+		else
+			wave_pos[CH3] = (wave_pos[CH3] + 1) & 31;
+		break;
+	}
+
+	case CH4:
+	{
+		freq_timer[CH4] = ch4_divisors[*NR43 & 7] << (*NR43 >> 4);
+		u8 xor_result = (LFSR & 1) ^ ((LFSR & 2) >> 1);
+		LFSR = (LFSR >> 1) | (xor_result << 14);
+		if (CheckBit(NR43, 3) == 1)
+		{
+			LFSR &= !(1 << 6);
+			LFSR |= xor_result << 6;
+		}
+		break;
+	}
 	}
 }
 
@@ -148,7 +284,7 @@ void APU::StepChannel4()
 f32 APU::GetChannel1Amplitude()
 {
 	if (channel_is_enabled[CH1] && DAC_is_enabled[CH1])
-		return square_wave_duty_table[channel_duty_1][wave_pos[CH1]] / 7.5f - 1.0f;
+		return square_wave_duty_table[duty[CH1]][wave_pos[CH1]] / 7.5f - 1.0f;
 	return 0.0f;
 }
 
@@ -156,7 +292,7 @@ f32 APU::GetChannel1Amplitude()
 f32 APU::GetChannel2Amplitude()
 {
 	if (channel_is_enabled[CH2] && DAC_is_enabled[CH2])
-		return square_wave_duty_table[channel_duty_2][wave_pos[CH2]] / 7.5f - 1.0f;
+		return square_wave_duty_table[duty[CH2]][wave_pos[CH2]] / 7.5f - 1.0f;
 	return 0.0f;
 }
 
@@ -180,7 +316,7 @@ f32 APU::GetChannel3Amplitude()
 
 f32 APU::GetChannel4Amplitude()
 {
-	if (channel_is_enabled[CH4] && DAC_is_enabled[4])
+	if (channel_is_enabled[CH4] && DAC_is_enabled[CH4])
 		return (~LFSR & 1) / 7.5f - 1.0f;
 	return 0.0f;
 }
@@ -218,10 +354,9 @@ void APU::StepFrameSequencer()
 
 void APU::Trigger(Channel channel)
 {
-	// todo: enable if channel == CH3 and DAC is disabled?
 	EnableChannel(channel);
 
-	EnableLength(channel);
+	//EnableLength(channel);
 
 	if (channel == CH1)
 		EnableSweep();
@@ -294,8 +429,6 @@ void APU::SetEnvelopeParams(Channel channel)
 	u8* NRx2 = NR12 + 5 * channel;
 	envelope[channel].direction = CheckBit(NRx2, 3) == 0 ? Envelope::Direction::Downwards : Envelope::Direction::Upwards;
 	envelope[channel].period = *NRx2 & 7;
-
-	DAC_is_enabled[channel] = *NRx2 >> 3;
 }
 
 
@@ -332,7 +465,7 @@ void APU::EnableSweep()
 
 void APU::SetSweepParams()
 {
-	sweep.period = (*NR10 & 7 << 4) >> 4;
+	sweep.period = (*NR10 >> 4) & 7;
 	sweep.direction = CheckBit(NR10, 3) == 0 ? Sweep::Direction::Increase : Sweep::Direction::Decrease;
 	sweep.shift = *NR10 & 7;
 }
@@ -382,40 +515,35 @@ u16 APU::ComputeNewSweepFreq()
 
 void APU::EnableLength(Channel channel)
 {
-	// Note: channel = 0, 1, 2, 3 ((CH1, CH2, CH3, CH4)). NR11, NR21, NR31, NR41 are stored in an array (BusImpl::memory),
-	//   where NR11 has index 0xFF11, NR21 has 0xFF16, NR31 has 0xFF1B, NR41 has 0xFF20
-
 	// the length timer is reloaded only if the current length timer is 0
 	if (length_timer[channel] == 0)
-		SetLengthParams(channel);
-}
-
-
-void APU::SetLengthParams(Channel channel)
-{
-	if (channel == CH3)
 	{
-		length_timer[channel] = 256 - *NR31;
-	}
-	else
-	{
-		u8* NRx1 = NR11 + 5 * channel;
-		length_timer[channel] = 64 - (*NRx1 & 0x3F);
+		if (channel == CH3)
+		{
+			length_timer[channel] = 256 - *NR31;
+		}
+		else
+		{
+			// Note: channel = 0, 1, 2, 3 ((CH1, CH2, CH3, CH4)). NR11, NR21, NR31, NR41 are stored in an array (BusImpl::memory),
+			//   where NR11 has index 0xFF11, NR21 has 0xFF16, NR31 has 0xFF1B, NR41 has 0xFF20
+			u8* NRx1 = NR11 + 5 * channel;
+			length_timer[channel] = 64 - (*NRx1 & 0x3F);
+		}
 	}
 }
 
 
 void APU::StepLength()
 {
-	//if (channel_is_enabled[CH1] && CheckBit(NR14, 6) == 1 && --length_timer[CH1] == 0) DisableChannel(CH1);
-	//if (channel_is_enabled[CH2] && CheckBit(NR24, 6) == 1 && --length_timer[CH2] == 0) DisableChannel(CH2);
-	//if (channel_is_enabled[CH3] && CheckBit(NR34, 6) == 1 && --length_timer[CH3] == 0) DisableChannel(CH3);
-	//if (channel_is_enabled[CH4] && CheckBit(NR44, 6) == 1 && --length_timer[CH4] == 0) DisableChannel(CH4);
-
-	if (CheckBit(NR14, 6) == 1 && --length_timer[CH1] == 0) DisableChannel(CH1);
-	if (CheckBit(NR24, 6) == 1 && --length_timer[CH2] == 0) DisableChannel(CH2);
-	if (CheckBit(NR34, 6) == 1 && --length_timer[CH3] == 0) DisableChannel(CH3);
-	if (CheckBit(NR44, 6) == 1 && --length_timer[CH4] == 0) DisableChannel(CH4);
+	for (int i = 0; i < 4; i++)
+	{
+		if (CheckBit(NR14 + 5 * i, 6) == 1 && length_timer[i] > 0)
+		{
+			length_timer[i]--;
+			if (length_timer[i] == 0)
+				DisableChannel(static_cast<Channel>(i));
+		}
+	}
 }
 
 
@@ -427,6 +555,17 @@ void APU::Sample()
 	ch_output[CH2] = GetChannel2Amplitude() * volume[CH2];
 	ch_output[CH3] = GetChannel3Amplitude()              ;
 	ch_output[CH4] = GetChannel4Amplitude() * volume[CH4];
+
+	ch_output[CH2] = 0;
+	ch_output[CH3] = 0;
+	ch_output[CH4] = 0;
+
+#ifdef CH1_DEBUG
+	char buf[200]{};
+	sprintf(buf, "amp: %f   vol: %i   out: %f   len: %i   freq: %i",
+		GetChannel1Amplitude(), (int)volume[0], ch_output[CH1], (int)length_timer[0], (int)freq_timer[0]);
+	ofs << buf << std::endl;
+#endif
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -454,13 +593,6 @@ void APU::Sample()
 		SDL_QueueAudio(1, sample_buffer, sample_buffer_size * sizeof(f32));
 		sample_buffer_index = 0;
 	}
-}
-
-
-// called whenever NR30 is written to
-void APU::UpdateCH3DACStatus()
-{
-	DAC_is_enabled[CH3] = *NR30 >> 7;
 }
 
 
