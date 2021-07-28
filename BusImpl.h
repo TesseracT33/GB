@@ -53,7 +53,5 @@ private:
 	u8 current_WRAM_bank = 1;
 
 	bool boot_rom_mapped = true;
-
-	void SetLCDStatus(u8 data);
 };
 

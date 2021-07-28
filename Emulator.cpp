@@ -121,7 +121,7 @@ void Emulator::MainLoop()
 		while (m_cycle_counter++ < m_cycles_per_frame)
 		{
 			// apu, ppu and timer is updated each t-cycle (see e.g. ppu.Update()), rest each m-cycle
-			//apu.Update();
+			apu.Update();
 			cpu.Update();
 			dma.Update();
 			ppu.Update();

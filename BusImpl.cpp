@@ -154,9 +154,20 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 			timer->TIMA_enabled = CheckBit(data, 2);
 			break;
 
+		case Addr::NR10: // 0xFF10
+			IO(NR10) = data;
+			apu->SetSweepParams();
+			break;
+
 		case Addr::NR11: // 0xFF11
 			IO(NR11) = data;
 			apu->channel_duty_1 = (data & ~0x3F) >> 6;
+			apu->SetLengthParams(APU::Channel::CH1);
+			break;
+
+		case Addr::NR12: // 0xFF12
+			IO(NR12) = data;
+			apu->SetEnvelopeParams(APU::Channel::CH1);
 			break;
 
 		case Addr::NR14: // 0xFF14
@@ -168,6 +179,12 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 		case Addr::NR21: // 0xFF16
 			IO(NR21) = data;
 			apu->channel_duty_2 = (data & ~0x3F) >> 6;
+			apu->SetLengthParams(APU::Channel::CH2);
+			break;
+
+		case Addr::NR22: // 0xFF17
+			IO(NR22) = data;
+			apu->SetEnvelopeParams(APU::Channel::CH2);
 			break;
 
 		case Addr::NR24: // 0xFF19
@@ -176,10 +193,30 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 				apu->Trigger(APU::Channel::CH2);
 			break;
 
+		case Addr::NR30: // 0xFF1A
+			IO(NR30) = data;
+			apu->UpdateCH3DACStatus();
+			break;
+
+		case Addr::NR31: // 0xFF1B
+			IO(NR31) = data;
+			apu->SetLengthParams(APU::Channel::CH3);
+			break;
+
 		case Addr::NR34: // 0xFF1E
 			IO(NR34) = data;
 			if (CheckBit(data, 7) == 1)
 				apu->Trigger(APU::Channel::CH3);
+			break;
+
+		case Addr::NR41: // 0xFF20
+			IO(NR41) = data;
+			apu->SetLengthParams(APU::Channel::CH4);
+			break;
+
+		case Addr::NR42: // 0xFF21
+			IO(NR42) = data;
+			apu->SetEnvelopeParams(APU::Channel::CH4);
 			break;
 
 		case Addr::NR44: // 0xFF23
@@ -198,9 +235,16 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 			break;
 
 		case Addr::LCDC: // 0xFF40
+		{
 			IO(LCDC) = data;
-			SetLCDStatus(data);
+			bool enable_LCD = CheckBit(data, 7);
+			if (enable_LCD && !ppu->LCD_enabled)
+				ppu->EnableLCD();
+			else if (!enable_LCD && ppu->LCD_enabled)
+				ppu->DisableLCD();
+			ppu->SetLCDCFlags();
 			break;
+		}
 
 		case Addr::STAT: // 0xFF41
 			// only bits 3-6 are writable
@@ -447,12 +491,49 @@ u8 BusImpl::Read(u16 addr, bool ppu_access)
 		switch (addr)
 		{
 		case Addr::IF: // 0xFF0F
-			// bits 5-7 always return 1
-			return IO(IF) | 7 << 5;
+			return IO(IF) | 7 << 5; // bits 5-7 always return 1
+
+		case Addr::NR11: // 0xFF11
+			return IO(NR11) | 0x3F; // bits 0-5 always return 1
+
+		case Addr::NR13: // 0xFF13
+			return 0xFF; // always return 0xFF
+
+		case Addr::NR14: // 0xFF14
+			return IO(NR14) | 0b10111111; // bits 0-5 and 7 always return 1
+
+		case Addr::NR21: // 0xFF16
+			return IO(NR21) | 0x3F; // bits 0-5 always return 1
+
+		case Addr::NR23: // 0xFF18
+			return 0xFF; // always returns 0xFF
+
+		case Addr::NR24: // 0xFF19
+			return IO(NR24) | 0b10111111; // bits 0-5 and 7 always return 1
+
+		case Addr::NR30: // 0xFF1A
+			return IO(NR30) | 0x7F; // bits 0-6 always return 1
+
+		case Addr::NR32: // 0xFF1C
+			return IO(NR32) | 0b10011111; // bits 0-4 and 7 always return 1
+
+		case Addr::NR33: // 0xFF1D
+			return 0xFF; // always returns 0xFF
+
+		case Addr::NR34: // 0xFF1E
+			return IO(NR34) | 0b10111111; // bits 0-5 and 7 always return 1
+
+		case Addr::NR41: // 0xFF20
+			return IO(NR41) | 3 << 6; // bits 6-7 always return 1
+
+		case Addr::NR44: // 0xFF23
+			return IO(NR44) | 0x3F; // bits 0-5 always return 1
+
+		case Addr::NR52: // 0xFF26
+			return IO(NR52) | 7 << 4; // bits 4-6 always return 1
 
 		case Addr::STAT: // 0xFF41
-			// bit 7 always returns 1. 
-			return IO(STAT) | 0x80;
+			return IO(STAT) | 0x80; // bit 7 always returns 1. 
 
 		case Addr::KEY1: // 0xFF4D
 			// bits 1-6 always return 1. in DMG mode, always return 0xFF
@@ -488,13 +569,13 @@ u8 BusImpl::Read(u16 addr, bool ppu_access)
 		case Addr::BCPD: // 0xFF69
 			// (CGB mode only) in LCD mode 3, this area can't be accessed
 			if (System::mode == System::Mode::CGB && (IO(STAT) & 3) != 3)
-				return ppu->Get_GCB_Colour(IO(BCPS) & 0x3F, true);
+				return ppu->Get_CGB_Colour(IO(BCPS) & 0x3F, true);
 			return 0xFF;
 
 		case Addr::OCPD: // 0xFF6B
 			// (CGB mode only) in LCD mode 3, this area can't be accessed
 			if (System::mode == System::Mode::CGB && (IO(STAT) & 3) != 3)
-				return ppu->Get_GCB_Colour(IO(OCPS) & 0x3F, false);
+				return ppu->Get_CGB_Colour(IO(OCPS) & 0x3F, false);
 			return 0xFF;
 
 		case Addr::SVBK: // 0xFF70
@@ -556,16 +637,6 @@ void BusImpl::Reset(bool execute_boot_rom)
 		IO(LCDC) = 0x91; IO(BGP) = 0xFC; IO(OBP0) = 0xFF; IO(OBP1) = 0xFF;
 		IO(STAT) = 0x85; IO(IF) = 0xE1;
 	}
-}
-
-void BusImpl::SetLCDStatus(u8 data)
-{
-	bool enable_LCD = CheckBit(data, 7);
-	if (enable_LCD && !ppu->LCD_enabled)
-		ppu->EnableLCD();
-	else if (!enable_LCD && ppu->LCD_enabled)
-		ppu->DisableLCD();
-	ppu->SetLCDCFlags();
 }
 
 
