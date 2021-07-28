@@ -291,8 +291,10 @@ void PPU::FetchBackgroundTile()
 	static u16 tile_addr;
 	static s16 tile_num;
 
-	// Fetch Tile No.
-	if (bg_tile_fetcher.step == 1)
+	switch (bg_tile_fetcher.step)
+	{
+
+	case TileFetchStep::TileNum:
 	{
 		u16 tileNumAddress;
 		u8 tileCol, tileRow;
@@ -312,12 +314,12 @@ void PPU::FetchBackgroundTile()
 
 		tile_num = tile_data_signed ? (s8)bus->Read(tileNumAddress, true) : bus->Read(tileNumAddress, true);
 
-		bg_tile_fetcher.step++;
+		bg_tile_fetcher.step = TileFetchStep::TileDataLow;
 		bg_tile_fetcher.t_cycles_until_update = 1;
+		break;
 	}
 
-	// Fetch Tile Data (Low)
-	else if (bg_tile_fetcher.step == 2)
+	case TileFetchStep::TileDataLow:
 	{
 		tile_addr = addr_tile_data + tile_num * 16;
 		if (bg_tile_fetcher.window_reached)
@@ -327,27 +329,27 @@ void PPU::FetchBackgroundTile()
 
 		tile_data_low = bus->Read(tile_addr, true);
 
-		bg_tile_fetcher.step++;
+		bg_tile_fetcher.step = TileFetchStep::TileDataHigh;
 		bg_tile_fetcher.t_cycles_until_update = 1;
+		break;
 	}
 
-	// Fetch Tile Data(High)
-	else if (bg_tile_fetcher.step == 3)
+	case TileFetchStep::TileDataHigh:
 	{
 		tile_data_high = bus->Read(tile_addr + 1, true);
 		bg_tile_fetcher.t_cycles_until_update = 1;
 		// The first time the background fetcher completes step 3 on a scanline, the status is fully reset and operation restarts at Step 1.
 		if (bg_tile_fetcher.step3_completed_on_current_scanline)
-			bg_tile_fetcher.step++;
+			bg_tile_fetcher.step = TileFetchStep::PushTile;
 		else
 		{
 			bg_tile_fetcher.step3_completed_on_current_scanline = true;
-			bg_tile_fetcher.step = 1;
+			bg_tile_fetcher.step = TileFetchStep::TileNum;
 		}
+		break;
 	}
 
-	// Push to FIFO
-	else if (bg_tile_fetcher.step == 4)
+	case TileFetchStep::PushTile:
 	{
 		// Step 4 is only executed if the background FIFO is fully empty.
 		// If it is not, this step repeats every cycle until it succeeds
@@ -364,11 +366,13 @@ void PPU::FetchBackgroundTile()
 		bg_tile_fetcher.xPos++;
 		bg_tile_fetcher.xPos &= 0x1F;
 
-		bg_tile_fetcher.step = 1;
+		bg_tile_fetcher.step = TileFetchStep::TileNum;
 		bg_tile_fetcher.t_cycles_until_update = 1;
 		// since pushing all pixels take 2 t-cycles, but this op takes 1 cycle in the emu, the ppu must wait one extra cycle before fetching pixels for background FIFO
 		if (pixel_shifter.t_cycles_until_update == 0)
 			pixel_shifter.t_cycles_until_update = 1;
+		break;
+	}
 	}
 }
 
@@ -378,7 +382,9 @@ void PPU::FetchSprite()
 	static u8 tile_data_low, tile_data_high, tile_num;
 	static u16 tile_addr;
 
-	if (sprite_tile_fetcher.step == 1)
+	switch (sprite_tile_fetcher.step)
+	{
+	case TileFetchStep::TileNum:
 	{
 		if (!sprite_tile_fetcher.sprite.ySize16)
 		{
@@ -400,10 +406,12 @@ void PPU::FetchSprite()
 				else                                   tile_num = sprite_tile_fetcher.sprite.tile_num & 0xFE;
 			}
 		}
-		sprite_tile_fetcher.step++;
+		sprite_tile_fetcher.step = TileFetchStep::TileDataLow;
 		sprite_tile_fetcher.t_cycles_until_update = 1;
+		break;
 	}
-	else if (sprite_tile_fetcher.step == 2)
+
+	case TileFetchStep::TileDataLow:
 	{
 		tile_addr = 0x8000 + 16 * tile_num;
 		if (!sprite_tile_fetcher.sprite.yFlip)
@@ -413,17 +421,20 @@ void PPU::FetchSprite()
 
 		tile_data_low = bus->Read(tile_addr, true);
 
-		sprite_tile_fetcher.step++;
+		sprite_tile_fetcher.step = TileFetchStep::TileDataHigh;
 		sprite_tile_fetcher.t_cycles_until_update = 1;
+		break;
 	}
-	else if (sprite_tile_fetcher.step == 3)
+
+	case TileFetchStep::TileDataHigh:
 	{
 		tile_data_high = bus->Read(tile_addr + 1, true);
-
-		sprite_tile_fetcher.step++;
+		sprite_tile_fetcher.step = TileFetchStep::PushTile;
 		sprite_tile_fetcher.t_cycles_until_update = 1;
+		break;
 	}
-	else if (sprite_tile_fetcher.step == 4)
+
+	case TileFetchStep::PushTile:
 	{
 		// Only pixels which are actually visible on the screen are loaded into the FIFO
 		// e.g., if pixel shifter xPos = 0, then a sprite with an X-value of 8 would have all 8 pixels loaded, 
@@ -456,11 +467,13 @@ void PPU::FetchSprite()
 			}
 		}
 
-		sprite_tile_fetcher.step = 1;
+		sprite_tile_fetcher.step = TileFetchStep::TileNum;
 		sprite_tile_fetcher.t_cycles_until_update = 1;
 		bg_tile_fetcher.paused = pixel_shifter.paused = sprite_tile_fetcher.active = false;
 		// 1 cycle delay since step 4 takes 2 cycles, and all other components are paused at this time
 		bg_tile_fetcher.t_cycles_until_update = pixel_shifter.t_cycles_until_update += 1;
+		break;
+	}
 	}
 }
 

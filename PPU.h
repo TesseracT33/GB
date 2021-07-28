@@ -129,10 +129,12 @@ private:
 		}
 	};
 
+	enum class TileFetchStep { TileNum, TileDataLow, TileDataHigh, PushTile };
+
 	struct BackgroundTileFetcher // note: also includes window tiles
 	{
 		bool paused = false;
-		int step = 1;
+		TileFetchStep step = TileFetchStep::TileNum;
 		int t_cycles_until_update = 0;
 		u8 xPos = 0;
 
@@ -143,12 +145,12 @@ private:
 
 		void StartOver()
 		{
-			step = 1;
+			step = TileFetchStep::TileNum;;
 			t_cycles_until_update = 0;
 		}
 		void Reset(bool reset_window_line_counter)
 		{
-			step = 1;
+			step = TileFetchStep::TileNum;;
 			t_cycles_until_update = 0;
 			paused = window_reached = step3_completed_on_current_scanline = false;
 			xPos = 0;
@@ -159,7 +161,7 @@ private:
 
 	struct SpriteTileFetcher
 	{
-		int step = 1;
+		TileFetchStep step = TileFetchStep::TileNum;
 		int t_cycles_until_update = 0;
 		bool paused = false; // if the fetcher is currently doing anything at all
 		bool active = false; // if a sprite fetch has been initiated, and is currently in process
@@ -167,7 +169,7 @@ private:
 
 		void Reset()
 		{
-			step = 1;
+			step = TileFetchStep::TileNum;
 			t_cycles_until_update = 0;
 			paused = active = false;
 		}
