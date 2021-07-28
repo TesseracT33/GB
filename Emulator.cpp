@@ -127,12 +127,6 @@ void Emulator::MainLoop()
 			ppu.Update();
 			timer.Update();
 		}
-		if (render_graphics_every_system_frame)
-			ppu.RenderGraphics();
-		else
-		{
-			// todo: render e.g. 60 times per sec
-		}
 		joypad.PollInput();
 
 		if (load_state_on_next_cycle)

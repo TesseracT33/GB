@@ -80,11 +80,11 @@ void PPU::Reset()
 
 void PPU::RenderGraphics()
 {
-	SDL_Surface* surface = SDL_CreateRGBSurfaceFrom((void*)rgb_arr, resolution_x, resolution_y,
+	SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(framebuffer, resolution_x, resolution_y,
 		8 * colour_channels, resolution_x * colour_channels, 0x0000FF, 0x00FF00, 0xFF0000, 0);
 
 	SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-	
+
 	rect.w = resolution_x * scale;
 	rect.h = resolution_y * scale;
 	rect.x = pixel_offset_x;
@@ -105,50 +105,55 @@ void PPU::Update()
 {
 	if (!LCD_enabled) return;
 
+	// 456 t-cycles per scanline in single-speed mode. for double-speed, all numbers should be doubled
+
+	// the following t_cycle_counter comparisons can only be true at the beginning of an m-cycle, so this can exist outside of the for-loop
+	if (*LY < 144)
+	{
+		if (t_cycle_counter == 0)
+		{
+			if (*LY == 0)
+				PrepareForNewFrame();
+			PrepareForNewScanline();
+			SetScreenMode(LCDStatus::Search_OAM_RAM);
+		}
+		else if (t_cycle_counter == 80 * System::speed_mode)
+		{
+			SetScreenMode(LCDStatus::Driver_transfer);
+			ClearFIFOs();
+		}
+	}
+	else if (*LY == 144 && t_cycle_counter == 4)
+	{
+		EnterVBlank();
+	}
+
 	for (int i = 0; i < 4; i++) // Update() is called each m-cycle, but ppu is updated each t-cycle
 	{
-		// 456 t-cycles per scanline in single-speed mode. for double-speed, all numbers should be doubled
-		if (*LY == 0 && t_cycle_counter == 0)
-		{
-			PrepareForNewFrame();
-		}
 		if (*LY < 144)
 		{
-			if (t_cycle_counter == 0)
-			{
-				PrepareForNewScanline();
-				SetScreenMode(LCDStatus::Search_OAM_RAM);
-				Search_OAM_for_Sprites();
-			}
-			else if (t_cycle_counter < 80 * System::speed_mode)
+			if (t_cycle_counter < 80 * System::speed_mode)
 			{
 				if (t_cycle_counter % OAM_check_interval == 0 && sprite_buffer.size() < 10 && can_access_OAM)
 					Search_OAM_for_Sprites();
 			}
-			else if (t_cycle_counter == 80 * System::speed_mode)
-			{
-				SetScreenMode(LCDStatus::Driver_transfer);
-				ClearFIFOs();
-				UpdatePixelFetchers();
-			}
-			else if (pixel_shifter.xPos < 160)
+			else if (pixel_shifter.xPos < resolution_x)
 			{
 				UpdatePixelFetchers();
 			}
 		}
-		else if (*LY == 144 && t_cycle_counter == 3) // todo: where does it say that Vblank is entered 1 m-cycle after set LY = 144?
-		{
-			EnterVBlank();
-		}
 
-		if (++t_cycle_counter == t_cycles_per_scanline * System::speed_mode)
-		{
-			t_cycle_counter = 0;
-			*LY = *LY == 153 ? 0 : *LY + 1;
+		t_cycle_counter++;
+	}
 
-			WY_equals_LY_in_current_frame |= *WY == *LY;
-			CheckSTATInterrupt();
-		}
+	// can only happen at the end of an m-cycle, so its not needed in the above for-loop
+	if (t_cycle_counter == t_cycles_per_scanline * System::speed_mode)
+	{
+		t_cycle_counter = 0;
+		*LY = (*LY + 1) % 154;
+
+		WY_equals_LY_in_current_frame |= *WY == *LY;
+		CheckSTATInterrupt();
 	}
 }
 
@@ -157,8 +162,8 @@ void PPU::EnterVBlank()
 {
 	bg_tile_fetcher.window_line_counter = -1;
 	SetScreenMode(LCDStatus::VBlank);
-	if (LCD_enabled)
-		cpu->RequestInterrupt(CPU::Interrupt::VBlank);
+	cpu->RequestInterrupt(CPU::Interrupt::VBlank);
+	RenderGraphics();
 }
 
 
@@ -272,7 +277,7 @@ SDL_Color PPU::GetColourFromPixel(Pixel& pixel, TileType object_type) const
 		else                             col_index = (*OBP[pixel.palette & 1] & 3 << shift) >> shift;
 		return GB_palette[col_index];
 	}
-	else 
+	else
 	{
 		if (object_type == TileType::BG) return BGP_GBC[4 * pixel.palette + pixel.col_id];
 		else                             return OBP_GBC[4 * pixel.palette + pixel.col_id];
@@ -318,7 +323,7 @@ void PPU::FetchBackgroundTile()
 		if (bg_tile_fetcher.window_reached)
 			tile_addr += 2 * (bg_tile_fetcher.window_line_counter % 8);
 		else
-			tile_addr += 2 * ((*LY + *SCY) % 8); 
+			tile_addr += 2 * ((*LY + *SCY) % 8);
 
 		tile_data_low = bus->Read(tile_addr, true);
 
@@ -424,7 +429,7 @@ void PPU::FetchSprite()
 		// e.g., if pixel shifter xPos = 0, then a sprite with an X-value of 8 would have all 8 pixels loaded, 
 		// while a sprite with an X-value of 7 would only have the rightmost 7 pixels loaded
 		// No need to worry about pixels going off the right side of the screen, since the PPU wouldn't push these pixels anyways
-		int pixels_to_ignore_left = std::max(0, 8 - sprite_tile_fetcher.sprite.xPos - pixel_shifter.xPos);
+		int pixels_to_ignore_left = std::max(0, 8 - sprite_tile_fetcher.sprite.xPos + pixel_shifter.xPos);
 
 		if (obj_priority_mode == OBJ_Priority_Mode::OAM_index)
 		{
@@ -436,7 +441,7 @@ void PPU::FetchSprite()
 		// if FIFO already contains n no. of pixels, insert only the last 8 - n pixels from the current sprite
 		if (!sprite_tile_fetcher.sprite.xFlip)
 		{
-			for (int i = 7 - sprite_FIFO.size() - pixels_to_ignore_left; i >= 0; i--)
+			for (int i = 7 - std::max((int)sprite_FIFO.size(), pixels_to_ignore_left); i >= 0; i--)
 			{
 				u8 col_id = CheckBit(tile_data_high, i) << 1 | CheckBit(tile_data_low, i);
 				sprite_FIFO.emplace(col_id, sprite_tile_fetcher.sprite.palette, sprite_tile_fetcher.sprite.bg_priority);
@@ -444,7 +449,7 @@ void PPU::FetchSprite()
 		}
 		else
 		{
-			for (int i = sprite_FIFO.size() + pixels_to_ignore_left; i <= 7; i++)
+			for (int i = std::max((int)sprite_FIFO.size(), pixels_to_ignore_left); i <= 7; i++)
 			{
 				u8 col_id = CheckBit(tile_data_high, i) << 1 | CheckBit(tile_data_low, i);
 				sprite_FIFO.emplace(col_id, sprite_tile_fetcher.sprite.palette, sprite_tile_fetcher.sprite.bg_priority);
@@ -512,8 +517,6 @@ void PPU::TryToInitiateSpriteFetch()
 
 void PPU::ShiftPixel()
 {
-	SDL_Color col;
-
 	if (background_FIFO.empty()) return;
 
 	// SCX % 8 background pixels are discarded at the start of each scanline rather than being pushed to the LCD
@@ -523,6 +526,8 @@ void PPU::ShiftPixel()
 		bg_tile_fetcher.leftmost_pixels_to_ignore--;
 		return;
 	}
+
+	SDL_Color col;
 
 	Pixel& bg_pixel = background_FIFO.front();
 
@@ -559,9 +564,9 @@ void PPU::ShiftPixel()
 
 void PPU::PushPixel(SDL_Color& col)
 {
-	rgb_arr[rgb_arr_pos    ] = col.r;
-	rgb_arr[rgb_arr_pos + 1] = col.g;
-	rgb_arr[rgb_arr_pos + 2] = col.b;
+	framebuffer[rgb_arr_pos    ] = col.r;
+	framebuffer[rgb_arr_pos + 1] = col.g;
+	framebuffer[rgb_arr_pos + 2] = col.b;
 	rgb_arr_pos += 3;
 
 	if (++pixel_shifter.xPos == resolution_x)
@@ -571,6 +576,8 @@ void PPU::PushPixel(SDL_Color& col)
 	// If it has, the background fetcher state is fully reset to step 1
 	if (!bg_tile_fetcher.window_reached)
 		CheckIfReachedWindow();
+
+	//TryToInitiateSpriteFetch();
 }
 
 
@@ -663,7 +670,6 @@ bool PPU::CheckIfReachedWindow()
 		bg_tile_fetcher.window_reached = true;
 		while (!background_FIFO.empty()) background_FIFO.pop();
 
-		// set to -1 at the start of every frame; will be set to 0 the first time the window is reached during a frame
 		bg_tile_fetcher.window_line_counter++;
 		bg_tile_fetcher.window_line_counter &= 0x1F;
 
@@ -733,8 +739,8 @@ void PPU::Set_CGB_Colour(u8 index, u8 data, bool BGP)
 		else           colour = BGP_reg[index] | BGP_reg[index + 1] << 8;
 
 		u8 red = colour & 0x1F;
-		u8 green = (colour & 0x1F << 5) >> 5;
-		u8 blue = (colour & 0x1F << 10) >> 10;
+		u8 green = (colour >> 5) & 0x1F;
+		u8 blue = (colour >> 10) & 0x1F;
 
 		// convert each 5-bit channel to 8-bit channels (https://github.com/mattcurrie/dmg-acid2)
 		red = (red << 3) | (red >> 2);
@@ -750,8 +756,8 @@ void PPU::Set_CGB_Colour(u8 index, u8 data, bool BGP)
 		else           colour = OBP_reg[index] | OBP_reg[index + 1] << 8;
 
 		u8 red = colour & 0x1F;
-		u8 green = (colour & 0x1F << 5) >> 5;
-		u8 blue = (colour & 0x1F << 10) >> 10;
+		u8 green = (colour >> 5) & 0x1F;
+		u8 blue = (colour >> 10) & 0x1F;
 
 		red = (red << 3) | (red >> 2);
 		green = (green << 3) | (green >> 2);
@@ -762,7 +768,7 @@ void PPU::Set_CGB_Colour(u8 index, u8 data, bool BGP)
 }
 
 
-u8 PPU::Get_GCB_Colour(u8 index, bool BGP)
+u8 PPU::Get_CGB_Colour(u8 index, bool BGP)
 {
 	if (BGP) return BGP_reg[index];
 	return OBP_reg[index];
@@ -816,7 +822,7 @@ void PPU::Deserialize(std::ifstream& ifs)
 
 	ifs.read((char*)&bg_tile_fetcher.paused, sizeof(bool));
 
-	ifs.read((char*)rgb_arr, sizeof(u8) * rbg_arr_size);
+	ifs.read((char*)framebuffer, sizeof(u8) * framebuffer_arr_size);
 
 	size_t num_sprites;
 	ifs.read((char*)&num_sprites, sizeof(size_t));

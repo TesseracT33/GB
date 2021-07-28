@@ -50,7 +50,7 @@ public:
 
 	/// GBC-specific ////////////////
 	void Set_CGB_Colour(u8 index, u8 data, bool BGP);
-	u8 Get_GCB_Colour(u8 index, bool BGP);
+	u8 Get_CGB_Colour(u8 index, bool BGP);
 	enum OBJ_Priority_Mode { OAM_index, Coordinate } obj_priority_mode;
 
 	// If a speed switch was started during HBlank or VBlank, the PPU can't access VRAM or OAM, resulting in only black pixels being pushed
@@ -187,10 +187,10 @@ private:
 		}
 	} pixel_shifter;
 
-
 	static const unsigned resolution_x = 160;
 	static const unsigned resolution_y = 144;
 	static const unsigned colour_channels = 3;
+	static const int framebuffer_arr_size = resolution_x * resolution_y * colour_channels;
 	const unsigned default_scale = 6;
 	const unsigned t_cycles_per_scanline = 456;
 
@@ -238,6 +238,11 @@ private:
 	bool STAT_cond_met_LCD_mode = false;
 	bool tile_data_signed = false;
 	
+	u8 scX_mod_8_at_frame_start;
+	u8 framebuffer[framebuffer_arr_size]{};
+
+	u16 OAM_sprite_addr = Bus::Addr::OAM_START;
+
 	unsigned t_cycle_counter = 0;
 	unsigned pixel_offset_x = 0;
 	unsigned pixel_offset_y = 0;
@@ -247,10 +252,6 @@ private:
 	unsigned rgb_arr_pos = 0;
 	unsigned OAM_check_interval = 0;
 
-	static const int rbg_arr_size = resolution_x * resolution_y * colour_channels;
-	u8 rgb_arr[rbg_arr_size]{};
-
-	u16 OAM_sprite_addr = Bus::Addr::OAM_START;
 
 	const SDL_Color color_white = Themes::grayscale[0];
 	const SDL_Color color_light_grey = Themes::grayscale[1];
