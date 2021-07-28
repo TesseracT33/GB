@@ -237,11 +237,14 @@ void Cartridge::Reset()
 {
 	current_ROM_bank = 1;
 	current_RAM_bank = 0;
-	RAM_enabled = false;
+	ROM_RAM_mode_select = 0;
 	RAM_RTC_mode_select = 0;
 	RTC_register_select = 0;
 	RTC_0_written = false;
-	RTC_enabled = false;
+	RAM_enabled = RTC_enabled = false;
+
+	external_RAM_available = external_battery_available = external_clock_available = false;
+	RAM_bank_is_2KB = false;
 
 	for (int i = 0; i < std::size(cartridge); i++)
 		cartridge[i] = 0;
