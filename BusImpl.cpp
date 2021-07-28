@@ -155,74 +155,122 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 			break;
 
 		case Addr::NR10: // 0xFF10
+			if (!apu->enabled) break;
 			IO(NR10) = data;
 			apu->SetSweepParams();
 			break;
 
 		case Addr::NR11: // 0xFF11
+			if (!apu->enabled) break;
 			IO(NR11) = data;
 			apu->channel_duty_1 = (data & ~0x3F) >> 6;
 			apu->SetLengthParams(APU::Channel::CH1);
 			break;
 
 		case Addr::NR12: // 0xFF12
+			if (!apu->enabled) break;
 			IO(NR12) = data;
 			apu->SetEnvelopeParams(APU::Channel::CH1);
 			break;
 
+		case Addr::NR13: // 0xFF13
+			if (!apu->enabled) break;
+			IO(NR13) = data;
+			break;
+
 		case Addr::NR14: // 0xFF14
+			if (!apu->enabled) break;
 			IO(NR14) = data;
 			if (CheckBit(data, 7) == 1)
 				apu->Trigger(APU::Channel::CH1);
 			break;
 
 		case Addr::NR21: // 0xFF16
+			if (!apu->enabled) break;
 			IO(NR21) = data;
 			apu->channel_duty_2 = (data & ~0x3F) >> 6;
 			apu->SetLengthParams(APU::Channel::CH2);
 			break;
 
 		case Addr::NR22: // 0xFF17
+			if (!apu->enabled) break;
 			IO(NR22) = data;
 			apu->SetEnvelopeParams(APU::Channel::CH2);
 			break;
 
+		case Addr::NR23: // 0xFF18
+			if (!apu->enabled) break;
+			IO(NR23) = data;
+			break;
+
 		case Addr::NR24: // 0xFF19
+			if (!apu->enabled) break;
 			IO(NR24) = data;
 			if (CheckBit(data, 7) == 1)
 				apu->Trigger(APU::Channel::CH2);
 			break;
 
 		case Addr::NR30: // 0xFF1A
+			if (!apu->enabled) break;
 			IO(NR30) = data;
 			apu->UpdateCH3DACStatus();
 			break;
 
 		case Addr::NR31: // 0xFF1B
+			if (!apu->enabled) break;
 			IO(NR31) = data;
 			apu->SetLengthParams(APU::Channel::CH3);
 			break;
 
+		case Addr::NR32: // 0xFF1C
+			if (!apu->enabled) break;
+			IO(NR32) = data;
+			break;
+
+		case Addr::NR33: // 0xFF1D
+			if (!apu->enabled) break;
+			IO(NR33) = data;
+			break;
+
 		case Addr::NR34: // 0xFF1E
+			if (!apu->enabled) break;
 			IO(NR34) = data;
 			if (CheckBit(data, 7) == 1)
 				apu->Trigger(APU::Channel::CH3);
 			break;
 
 		case Addr::NR41: // 0xFF20
+			if (!apu->enabled) break;
 			IO(NR41) = data;
 			apu->SetLengthParams(APU::Channel::CH4);
 			break;
 
 		case Addr::NR42: // 0xFF21
+			if (!apu->enabled) break;
 			IO(NR42) = data;
 			apu->SetEnvelopeParams(APU::Channel::CH4);
 			break;
 
+		case Addr::NR43: // 0xFF22
+			if (!apu->enabled) break;
+			IO(NR43) = data;
+			break;
+
 		case Addr::NR44: // 0xFF23
+			if (!apu->enabled) break;
 			IO(NR44) = data;
 			if (CheckBit(data, 7) == 1)
 				apu->Trigger(APU::Channel::CH4);
+			break;
+
+		case Addr::NR50: // 0xFF24
+			if (!apu->enabled) break;
+			IO(NR50) = data;
+			break;
+
+		case Addr::NR51: // 0xFF25
+			if (!apu->enabled) break;
+			IO(NR51) = data;
 			break;
 
 		case Addr::NR52: // 0xFF26
@@ -493,14 +541,20 @@ u8 BusImpl::Read(u16 addr, bool ppu_access)
 		case Addr::IF: // 0xFF0F
 			return IO(IF) | 7 << 5; // bits 5-7 always return 1
 
+		case Addr::NR10: // 0xFF10
+			return IO(NR10) | 0x80; // bit 7 always returns 1
+
 		case Addr::NR11: // 0xFF11
 			return IO(NR11) | 0x3F; // bits 0-5 always return 1
 
 		case Addr::NR13: // 0xFF13
-			return 0xFF; // always return 0xFF
+			return 0xFF; // always returns 0xFF
 
 		case Addr::NR14: // 0xFF14
-			return IO(NR14) | 0b10111111; // bits 0-5 and 7 always return 1
+			return IO(NR14) | 0xBF; // bits 0-5 and 7 always return 1
+
+		case Addr::NR20: // 0xFF15
+			return 0xFF; // does not exist
 
 		case Addr::NR21: // 0xFF16
 			return IO(NR21) | 0x3F; // bits 0-5 always return 1
@@ -509,28 +563,45 @@ u8 BusImpl::Read(u16 addr, bool ppu_access)
 			return 0xFF; // always returns 0xFF
 
 		case Addr::NR24: // 0xFF19
-			return IO(NR24) | 0b10111111; // bits 0-5 and 7 always return 1
+			return IO(NR24) | 0xBF; // bits 0-5 and 7 always return 1
 
 		case Addr::NR30: // 0xFF1A
 			return IO(NR30) | 0x7F; // bits 0-6 always return 1
 
+		case Addr::NR31: // 0xFF1B
+			return 0xFF; // always returns 0xFF
+
 		case Addr::NR32: // 0xFF1C
-			return IO(NR32) | 0b10011111; // bits 0-4 and 7 always return 1
+			return IO(NR32) | 0x9F; // bits 0-4 and 7 always return 1
 
 		case Addr::NR33: // 0xFF1D
 			return 0xFF; // always returns 0xFF
 
 		case Addr::NR34: // 0xFF1E
-			return IO(NR34) | 0b10111111; // bits 0-5 and 7 always return 1
+			return IO(NR34) | 0xBF; // bits 0-5 and 7 always return 1
+
+		case Addr::NR40: // 0xFF1F
+			return 0xFF; // does not exist
 
 		case Addr::NR41: // 0xFF20
-			return IO(NR41) | 3 << 6; // bits 6-7 always return 1
+			return 0xFF; // always returns 0xFF
 
 		case Addr::NR44: // 0xFF23
-			return IO(NR44) | 0x3F; // bits 0-5 always return 1
+			return IO(NR44) | 0xBF; // bits 0-5 and 7 always return 1
 
 		case Addr::NR52: // 0xFF26
-			return IO(NR52) | 7 << 4; // bits 4-6 always return 1
+			return IO(NR52) | 0x70; // bits 4-6 always return 1
+
+		case 0xFF27:
+		case 0xFF28:
+		case 0xFF29:
+		case 0xFF2A:
+		case 0xFF2B:
+		case 0xFF2C:
+		case 0xFF2D:
+		case 0xFF2E:
+		case 0xFF2F:
+			return 0xFF; // does not exist
 
 		case Addr::STAT: // 0xFF41
 			return IO(STAT) | 0x80; // bit 7 always returns 1. 
