@@ -15,7 +15,7 @@ void Timer::Initialize()
 void Timer::Reset()
 {
 	SetBit(TAC, 2);
-	DIV = prev_AND_result = AND_bit_pos_index = 0;
+	DIV = prev_TIMA_AND_result = AND_bit_pos_index = 0;
 	DIV_enabled = TIMA_enabled = true;
 	awaiting_interrupt_request = false;
 }
@@ -37,7 +37,7 @@ void Timer::Update()
 		DIV++;
 
 		bool AND_result = CheckBit(DIV, AND_bit_pos[AND_bit_pos_index]) && TIMA_enabled;
-		if (AND_result == 0 && prev_AND_result == 1)
+		if (AND_result == 0 && prev_TIMA_AND_result == 1)
 		{
 			(*TIMA)++;
 			if (*TIMA == 0)
@@ -46,7 +46,7 @@ void Timer::Update()
 				t_cycles_until_interrupt_request = 4;
 			}
 		}
-		prev_AND_result = AND_result;
+		prev_TIMA_AND_result = AND_result;
 	}
 
 	// note: the below cond can only be true if (DIV mod 4 == 0)
@@ -55,8 +55,11 @@ void Timer::Update()
 		(*DIV_bus)++;
 
 		// step the APU frame sequencer when bit 5 of upper byte of DIV becomes 1 (bit 6 in double speed mode)
-		if ((*DIV_bus & 0x20 * System::speed_mode) == 0x20 * System::speed_mode)
+		// this is equivalent to bits 0-4 being cleared (0-5 in double speed mode)
+		bool AND_result = *DIV_bus & 0x3F >> (2 - System::speed_mode);
+		if (AND_result == 0 && prev_DIV_AND_result == 1 && apu->enabled)
 			apu->StepFrameSequencer();
+		prev_DIV_AND_result = AND_result;
 	}
 }
 
@@ -76,7 +79,7 @@ void Timer::ResetDIV()
 void Timer::Deserialize(std::ifstream& ifs)
 {
 	ifs.read((char*)&DIV, sizeof(DIV));
-	ifs.read((char*)&prev_AND_result, sizeof(bool));
+	ifs.read((char*)&prev_TIMA_AND_result, sizeof(bool));
 	ifs.read((char*)&TIMA_enabled, sizeof(bool));
 	ifs.read((char*)&DIV_enabled, sizeof(bool));
 	ifs.read((char*)&awaiting_interrupt_request, sizeof(bool));
@@ -88,7 +91,7 @@ void Timer::Deserialize(std::ifstream& ifs)
 void Timer::Serialize(std::ofstream& ofs)
 {
 	ofs.write((char*)&DIV, sizeof(DIV));
-	ofs.write((char*)&prev_AND_result, sizeof(bool));
+	ofs.write((char*)&prev_TIMA_AND_result, sizeof(bool));
 	ofs.write((char*)&TIMA_enabled, sizeof(bool));
 	ofs.write((char*)&DIV_enabled, sizeof(bool));
 	ofs.write((char*)&awaiting_interrupt_request, sizeof(bool));

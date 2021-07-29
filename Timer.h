@@ -17,9 +17,8 @@ public:
 	u8* TIMA;
 	u8* TMA;
 
-	u16 DIV = 0;
-	bool prev_AND_result = 0;
-
+	bool prev_TIMA_AND_result = 0;
+	bool prev_DIV_AND_result = 0;
 	bool TIMA_enabled = true;
 	bool DIV_enabled = true;
 
@@ -39,5 +38,7 @@ private:
 
 	const u8 AND_bit_pos[4] = { 9, 3, 5, 7 };
 	unsigned AND_bit_pos_index = 0;
+
+	u16 DIV = 0;
 };
 
