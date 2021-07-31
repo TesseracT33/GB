@@ -15,17 +15,18 @@ class APU final : public Serializable
 	std::ofstream ofs{ "apu_debug.txt", std::ofstream::out };
 #endif
 public:
-	enum Channel { CH1, CH2, CH3, CH4 };
+	enum Channel : u8 { CH1, CH2, CH3, CH4 };
 
 	Bus* bus;
 
 	bool enabled = false;
 	
+	u8 GetWaveRamSampleIndex() { return wave_pos[CH3]; }
 	void Initialize();
 	void Reset();
 	void StepFrameSequencer();
 	void Update();
-	void WriteToReg(u16 addr, u8 data);
+	void WriteToAudioReg(u16 addr, u8 data);
 
 	void Serialize(std::ofstream& ofs) override;
 	void Deserialize(std::ifstream& ifs) override;
@@ -33,14 +34,15 @@ public:
 private:
 	struct Envelope
 	{
-		enum Direction { Downwards, Upwards } direction;
-		u8 period, period_timer;
+		enum class Direction { Downwards, Upwards } direction;
+		u8 initial_volume, period, period_timer;
+		bool is_updating;
 	} envelope[4]{}; // envelope[2] is not used since CH3 doesn't have envelope
 
 	struct Sweep
 	{
-		enum Direction { Increase, Decrease } direction;
-		bool enabled;
+		enum class Direction { Increase, Decrease } direction;
+		bool enabled = false, negate_has_been_used = false;
 		u8 period, shift, timer;
 		u16 shadow_freq;
 	} sweep; // for channel 1
@@ -53,8 +55,8 @@ private:
 		0, 1, 1, 1, 1, 1, 1, 0
 	};
 
-	static const int sample_rate = 48000;
-	static const int sample_buffer_size = 1024;
+	static const int sample_rate = 65536;
+	static const int sample_buffer_size = 2048;
 	const u8 ch3_output_level_shift[4] = { 4, 0, 1, 2 };
 	const u8 ch4_divisors[8] = { 8, 16, 32, 48, 64, 80, 96, 112 }; // maps divisor codes to divisors in CH4 freq timer calculation
 
@@ -64,6 +66,7 @@ private:
 	u8*         NR41, * NR42, * NR43, * NR44;
 	u8* NR50, * NR51, * NR52;
 
+	bool first_half_of_length_period = false;
 	bool set_ch3_wave_pos_to_one_after_sample = false;
 	bool channel_is_enabled[4]{};
 	bool DAC_is_enabled[4]{};
@@ -79,6 +82,7 @@ private:
 	u16 LFSR = 0x7FFF;
 	u16 freq[4]{};
 	u16 freq_timer[4]{};
+	u8 length[4]{};
 	u16 length_timer[4]{}; // todo: should it be u8?
 
 	unsigned sample_buffer_index = 0;
@@ -91,23 +95,26 @@ private:
 	SDL_AudioSpec audio_spec;
 
 	u16 ComputeNewSweepFreq();
+	void DisableAPU();
 	void DisableChannel(Channel channel);
+	void EnableAPU();
 	void EnableChannel(Channel channel);
 	void EnableEnvelope(Channel channel);
-	void EnableLength(Channel channel);
 	void EnableSweep();
 	f32 GetChannel1Amplitude();
 	f32 GetChannel2Amplitude();
 	f32 GetChannel3Amplitude();
 	f32 GetChannel4Amplitude();
-	void PrepareChannelAfterTrigger(Channel channel);
 	void ResetAllRegisters();
 	void Sample();
 	void SetEnvelopeParams(Channel channel);
 	void SetSweepParams();
-	void StepChannel(Channel channel);
+	void StepChannel1();
+	void StepChannel2();
+	void StepChannel3();
+	void StepChannel4();
 	void StepEnvelope(Channel channel);
-	void StepLength();
+	void StepLength(Channel channel);
 	void StepSweep();
 	void Trigger(Channel channel);
 };

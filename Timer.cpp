@@ -15,7 +15,7 @@ void Timer::Initialize()
 void Timer::Reset()
 {
 	SetBit(TAC, 2);
-	DIV = prev_TIMA_AND_result = AND_bit_pos_index = 0;
+	DIV = prev_TIMA_AND_result = prev_DIV_AND_result = AND_bit_pos_index = 0;
 	DIV_enabled = TIMA_enabled = true;
 	awaiting_interrupt_request = false;
 }
@@ -80,6 +80,7 @@ void Timer::Deserialize(std::ifstream& ifs)
 {
 	ifs.read((char*)&DIV, sizeof(DIV));
 	ifs.read((char*)&prev_TIMA_AND_result, sizeof(bool));
+	ifs.read((char*)&prev_DIV_AND_result, sizeof(bool));
 	ifs.read((char*)&TIMA_enabled, sizeof(bool));
 	ifs.read((char*)&DIV_enabled, sizeof(bool));
 	ifs.read((char*)&awaiting_interrupt_request, sizeof(bool));
@@ -92,6 +93,7 @@ void Timer::Serialize(std::ofstream& ofs)
 {
 	ofs.write((char*)&DIV, sizeof(DIV));
 	ofs.write((char*)&prev_TIMA_AND_result, sizeof(bool));
+	ofs.write((char*)&prev_DIV_AND_result, sizeof(bool));
 	ofs.write((char*)&TIMA_enabled, sizeof(bool));
 	ofs.write((char*)&DIV_enabled, sizeof(bool));
 	ofs.write((char*)&awaiting_interrupt_request, sizeof(bool));

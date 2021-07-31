@@ -168,7 +168,6 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 		case Addr::NR32:
 		case Addr::NR33:
 		case Addr::NR34:
-		case Addr::NR41:
 		case Addr::NR42:
 		case Addr::NR43:
 		case Addr::NR44:
@@ -176,13 +175,19 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 		case Addr::NR51:
 			if (!apu->enabled) break;
 			IO(addr) = data;
-			apu->WriteToReg(addr, data);
+			apu->WriteToAudioReg(addr, data);
+			break;
+
+		case Addr::NR41:
+			// while the apu is off, writes can still be made to NR41. source: blargg test rom 'dmg_sound' -- '11.regs after power'
+			IO(addr) = data;
+			apu->WriteToAudioReg(addr, data);
 			break;
 
 		case Addr::NR52:
 			// bits 0-3 are read-only. bit 7 is r/w. the rest are not used
 			IO(NR52) = IO(NR52) & 0x7F | data & 0x80;
-			apu->WriteToReg(addr, data);
+			apu->WriteToAudioReg(addr, data);
 			break;
 
 		case Addr::LCDC: // 0xFF40
@@ -347,8 +352,13 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 			break;
 
 		default:
+			// Wave ram (0xFF30-0xFF3F)
+			// Writing to wave ram when the apu is enabled gives special behaviour...
+			if (addr >= WAV_START && addr <= WAV_START + 0xF && apu->enabled)
+				addr = WAV_START + apu->GetWaveRamSampleIndex() / 2;
+
 			// writing is in general freely allowed
-			memory.io[addr - 0xFF00] = data;
+			IO(addr) = data;
 			break;
 		}
 	}
@@ -436,7 +446,7 @@ u8 BusImpl::Read(u16 addr, bool ppu_access)
 		return 0;
 	}
 
-	// FF00-FE7F -- IO
+	// FF00-FF7F -- IO
 	else if (addr <= 0xFF7F)
 	{
 		switch (addr)
@@ -558,7 +568,11 @@ u8 BusImpl::Read(u16 addr, bool ppu_access)
 			return 0xFF;
 
 		default:
-			return memory.io[addr - 0xFF00];
+			// Wave ram (0xFF30-0xFF3F)
+			// Reading from wave ram when the apu is enabled gives special behaviour...
+			if (addr >= WAV_START && addr <= WAV_START + 0xF && apu->enabled)
+				addr = WAV_START + apu->GetWaveRamSampleIndex() / 2;
+			return IO(addr);
 		}
 	}
 
