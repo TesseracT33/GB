@@ -96,8 +96,8 @@ public:
 	};
 
 	virtual bool LoadBootRom(const std::string& boot_path) = 0;
-	virtual void Write(u16 addr, u8 data, bool ppu_access = false) = 0;
-	virtual u8   Read(u16 addr, bool ppu_access = false) = 0;
+	virtual void Write(u16 addr, u8 data, bool ppu_access = false, bool apu_access = false) = 0;
+	virtual u8   Read(u16 addr, bool ppu_access = false, bool apu_access = false) = 0;
 	virtual u8*  ReadIOPointer(u16 addr) = 0;
 	virtual void Reset(bool execute_boot_rom) = 0;
 

@@ -6,6 +6,7 @@
 #include "DMA.h"
 #include "Joypad.h"
 #include "PPU.h"
+#include "Serial.h"
 #include "Timer.h"
 #include "Utils.h"
 
@@ -18,11 +19,12 @@ public:
 	class DMA* dma;
 	Joypad* joypad;
 	PPU* ppu;
+	Serial* serial;
 	Timer* timer;
 
 	bool LoadBootRom(const std::string& boot_path);
-	void Write(u16 addr, u8 data, bool ppu_access = false);
-	u8   Read(u16 addr, bool ppu_access = false);
+	void Write(u16 addr, u8 data, bool ppu_access = false, bool apu_access = false);
+	u8   Read(u16 addr, bool ppu_access = false, bool apu_access = false);
 	u8*  ReadIOPointer(u16 addr);
 	void Reset(bool execute_boot_rom);
 

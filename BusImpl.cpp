@@ -43,7 +43,7 @@ bool BusImpl::LoadBootRom(const std::string& boot_path)
 }
 
 
-void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
+void BusImpl::Write(u16 addr, u8 data, bool ppu_access, bool apu_access)
 {
 	// 0000h-7FFFh
 	if (addr <= 0x7FFF)
@@ -137,10 +137,7 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 
 		case Addr::SC: // 0xFF02
 			if (data == 0x81)
-			{
-				cpu->RequestInterrupt(CPU::Interrupt::Serial);
-				IO(SC) &= 0x7F;
-			}
+				serial->TriggerTransfer();
 			break;
 
 		case Addr::DIV: // 0xFF04
@@ -188,6 +185,28 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 			// bits 0-3 are read-only. bit 7 is r/w. the rest are not used
 			IO(NR52) = IO(NR52) & 0x7F | data & 0x80;
 			apu->WriteToAudioReg(addr, data);
+			break;
+
+		case 0xFF30: // wave ram (0xFF30-0xFF3E)
+		case 0xFF31:
+		case 0xFF32:
+		case 0xFF33:
+		case 0xFF34:
+		case 0xFF35:
+		case 0xFF36:
+		case 0xFF37:
+		case 0xFF38:
+		case 0xFF39:
+		case 0xFF3A:
+		case 0xFF3B:
+		case 0xFF3C:
+		case 0xFF3D:
+		case 0xFF3E:
+		case 0xFF3F:
+			if (!apu_access)
+				apu->WriteToWaveRam(addr, data);
+			else
+				IO(addr) = data;
 			break;
 
 		case Addr::LCDC: // 0xFF40
@@ -352,11 +371,6 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 			break;
 
 		default:
-			// Wave ram (0xFF30-0xFF3F)
-			// Writing to wave ram when the apu is enabled gives special behaviour...
-			if (addr >= WAV_START && addr <= WAV_START + 0xF && apu->enabled)
-				addr = WAV_START + apu->GetWaveRamSampleIndex() / 2;
-
 			// writing is in general freely allowed
 			IO(addr) = data;
 			break;
@@ -377,7 +391,7 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access)
 }
 
 
-u8 BusImpl::Read(u16 addr, bool ppu_access)
+u8 BusImpl::Read(u16 addr, bool ppu_access, bool apu_access)
 {
 	if (addr <= 0xFF || System::mode == System::Mode::CGB && addr <= 0x8FF)
 	{
@@ -516,6 +530,26 @@ u8 BusImpl::Read(u16 addr, bool ppu_access)
 		case 0xFF2F:
 			return 0xFF; // does not exist
 
+		case 0xFF30: // wave ram (0xFF30-0xFF3E)
+		case 0xFF31:
+		case 0xFF32:
+		case 0xFF33:
+		case 0xFF34:
+		case 0xFF35:
+		case 0xFF36:
+		case 0xFF37:
+		case 0xFF38:
+		case 0xFF39:
+		case 0xFF3A:
+		case 0xFF3B:
+		case 0xFF3C:
+		case 0xFF3D:
+		case 0xFF3E:
+		case 0xFF3F:
+			if (!apu_access)
+				return apu->ReadFromWaveRam(addr);
+			return IO(addr);
+
 		case Addr::STAT: // 0xFF41
 			return IO(STAT) | 0x80; // bit 7 always returns 1. 
 
@@ -569,9 +603,8 @@ u8 BusImpl::Read(u16 addr, bool ppu_access)
 
 		default:
 			// Wave ram (0xFF30-0xFF3F)
-			// Reading from wave ram when the apu is enabled gives special behaviour...
-			if (addr >= WAV_START && addr <= WAV_START + 0xF && apu->enabled)
-				addr = WAV_START + apu->GetWaveRamSampleIndex() / 2;
+			if (addr >= 0xFF30 && addr <= 0xFF3F)
+				return apu->ReadFromWaveRam(addr);
 			return IO(addr);
 		}
 	}
