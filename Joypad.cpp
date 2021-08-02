@@ -151,6 +151,7 @@ const char* Joypad::GetCurrentBindingString(Button button, InputMethod input_met
 		case Button::DOWN:   return SDL_GetKeyName(new_KeyboardBindings.DOWN);
 		}
 	}
+	return nullptr;
 }
 
 
