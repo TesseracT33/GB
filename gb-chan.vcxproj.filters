@@ -81,6 +81,9 @@
     <ClInclude Include="InputBindingsWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Serial.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp">
@@ -126,6 +129,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="System.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Serial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

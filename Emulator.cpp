@@ -37,7 +37,11 @@ void Emulator::ConnectSystemComponents()
 	bus.dma = &dma;
 	bus.joypad = &joypad;
 	bus.ppu = &ppu;
+	bus.serial = &serial;
 	bus.timer = &timer;
+
+	serial.bus = &bus;
+	serial.cpu = &cpu;
 
 	timer.apu = &apu;
 	timer.bus = &bus;
@@ -48,6 +52,7 @@ void Emulator::ConnectSystemComponents()
 	cpu.Initialize();
 	joypad.Initialize();
 	ppu.Initialize();
+	serial.Initialize();
 	timer.Initialize();
 }
 
@@ -60,6 +65,7 @@ void Emulator::SetupSerializableComponents()
 	serializable_components.push_back(&cpu);
 	serializable_components.push_back(&dma);
 	serializable_components.push_back(&ppu);
+	serializable_components.push_back(&serial);
 	serializable_components.push_back(&timer);
 	serializable_components.push_back(this);
 }
@@ -99,6 +105,7 @@ void Emulator::StartGame(wxString rom_path)
 	dma.Reset();
 	joypad.Reset();
 	ppu.Reset();
+	serial.Reset();
 	timer.Reset();
 
 	MainLoop();
@@ -125,6 +132,7 @@ void Emulator::MainLoop()
 			cpu.Update();
 			dma.Update();
 			ppu.Update();
+			serial.Update();
 			timer.Update();
 		}
 		joypad.PollInput();

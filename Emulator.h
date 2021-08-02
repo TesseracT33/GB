@@ -62,6 +62,7 @@ public:
 	DMA dma;
 	Joypad joypad;
 	PPU ppu;
+	Serial serial;
 	Timer timer;
 
 	Observer* gui = nullptr; // used for setting the current fps in the window title. Observer : GUI : wxFrame

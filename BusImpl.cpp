@@ -136,6 +136,7 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access, bool apu_access)
 		}
 
 		case Addr::SC: // 0xFF02
+			IO(SC) = data;
 			if (data == 0x81)
 				serial->TriggerTransfer();
 			break;
