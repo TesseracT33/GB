@@ -240,7 +240,6 @@ private:
 	bool STAT_cond_met_LCD_mode = false;
 	bool tile_data_signed = false;
 	
-	u8 scX_mod_8_at_frame_start;
 	u8 framebuffer[framebuffer_arr_size]{};
 
 	u16 OAM_sprite_addr = Bus::Addr::OAM_START;
@@ -251,7 +250,7 @@ private:
 	unsigned scale_temp = 0;
 	unsigned pixel_offset_x_temp = 0;
 	unsigned pixel_offset_y_temp = 0;
-	unsigned rgb_arr_pos = 0;
+	unsigned framebuffer_pos = 0;
 	unsigned OAM_check_interval = 0;
 
 

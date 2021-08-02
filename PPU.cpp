@@ -577,10 +577,10 @@ void PPU::ShiftPixel()
 
 void PPU::PushPixel(SDL_Color& col)
 {
-	framebuffer[rgb_arr_pos    ] = col.r;
-	framebuffer[rgb_arr_pos + 1] = col.g;
-	framebuffer[rgb_arr_pos + 2] = col.b;
-	rgb_arr_pos += 3;
+	framebuffer[framebuffer_pos    ] = col.r;
+	framebuffer[framebuffer_pos + 1] = col.g;
+	framebuffer[framebuffer_pos + 2] = col.b;
+	framebuffer_pos += 3;
 
 	if (++pixel_shifter.xPos == resolution_x)
 		EnterHBlank();
@@ -684,7 +684,6 @@ bool PPU::CheckIfReachedWindow()
 		while (!background_FIFO.empty()) background_FIFO.pop();
 
 		bg_tile_fetcher.window_line_counter++;
-		bg_tile_fetcher.window_line_counter &= 0x1F;
 
 		return true;
 	}
@@ -708,7 +707,7 @@ void PPU::PrepareForNewScanline()
 void PPU::PrepareForNewFrame()
 {
 	WY_equals_LY_in_current_frame = *LY == *WY;
-	rgb_arr_pos = 0;
+	framebuffer_pos = 0;
 	OAM_check_interval = 2 * System::speed_mode; // in single speed mode, OAM is checked every 2 t-cycles, 4 in double speed
 }
 
