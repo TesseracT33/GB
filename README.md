@@ -32,7 +32,7 @@ The emulator passes the following tests:
 - mooneye -- all MBC1, MBC2 and MBC5 tests, except for mbc1/multicart_rom_8Mb
 
 # Known bugs and issues
-- Various games have issues (Cannot get past the menus in Pokémon Red/Blue, input not working in Alleyway).
+- Some minor graphical issues.
 - Controller input is not detected at all.
 - When you open the input binding window, a wxWidgets warning is displayed.
 
