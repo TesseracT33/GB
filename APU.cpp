@@ -46,15 +46,16 @@ void APU::Reset()
 	SDL_AudioSpec obtainedSpec;
 	SDL_OpenAudio(&audio_spec, &obtainedSpec);
 	SDL_PauseAudio(0);
+
+	// set wave ram pattern (https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware)
+	u8* wav_start = bus->ReadIOPointer(Bus::Addr::WAV_START);
+	const u8* source = (System::mode == System::Mode::DMG ? dmg_initial_wave_ram : cgb_initial_wave_ram);
+	memcpy(wav_start, source, 0x10 * sizeof(u8));
 }
 
 
 void APU::ResetAllRegisters()
 {
-	u16 prev_length_timers[4]{};
-	for (int i = 0; i < 4; i++)
-		prev_length_timers[i] = length_timer[i];
-
 	// zero all registers between NR10 and NR52
 	for (u8* addr = NR10; addr <= NR52; addr++)
 		*addr = 0;
@@ -69,16 +70,6 @@ void APU::ResetAllRegisters()
 		channel_is_enabled[i] = DAC_is_enabled[i] = length_is_enabled[i] = 0;
 		volume[i] = freq_timer[i] = 0;
 	}
-
-	// On CGB, length counters are reset when powered up.
-	// On DMG, they are unaffected, and not clocked.
-	// source: blargg test rom 'dmg_sound' -- '08-len ctr during power'
-	if (System::mode == System::Mode::DMG)
-	{
-		for (int i = 0; i < 4; i++)
-			length_timer[i] = prev_length_timers[i];
-	}
-
 
 	// todo: what other regs to reset?
 }
@@ -97,7 +88,7 @@ void APU::WriteToAudioReg(u16 addr, u8 data)
 	case Bus::Addr::NR11: // 0xFF11
 		duty[CH1] = data >> 6;
 		length[CH1] = data & 0x3F;
-		length_timer[CH1] = 64 - length[CH1];
+		length_counter[CH1] = 64 - length[CH1];
 		break;
 
 	case Bus::Addr::NR12: // 0xFF12
@@ -120,10 +111,10 @@ void APU::WriteToAudioReg(u16 addr, u8 data)
 		bool enable_length = data & 0x40;
 
 		if (first_half_of_length_period && enable_length &&
-			!length_is_enabled[CH1] && length_timer[CH1] > 0)
+			!length_is_enabled[CH1] && length_counter[CH1] > 0)
 		{
-			length_timer[CH1]--;
-			if (length_timer[CH1] == 0)
+			length_counter[CH1]--;
+			if (length_counter[CH1] == 0)
 				DisableChannel(CH1);
 		}
 		length_is_enabled[CH1] = enable_length;
@@ -137,7 +128,7 @@ void APU::WriteToAudioReg(u16 addr, u8 data)
 	case Bus::Addr::NR21: // 0xFF16
 		duty[CH2] = data >> 6;
 		length[CH2] = data & 0x3F;
-		length_timer[CH2] = 64 - length[CH2];
+		length_counter[CH2] = 64 - length[CH2];
 		break;
 
 	case Bus::Addr::NR22: // 0xFF17
@@ -160,10 +151,10 @@ void APU::WriteToAudioReg(u16 addr, u8 data)
 		bool enable_length = data & 0x40;
 
 		if (first_half_of_length_period && enable_length &&
-			!length_is_enabled[CH2] && length_timer[CH2] > 0)
+			!length_is_enabled[CH2] && length_counter[CH2] > 0)
 		{
-			length_timer[CH2]--;
-			if (length_timer[CH2] == 0)
+			length_counter[CH2]--;
+			if (length_counter[CH2] == 0)
 				DisableChannel(CH2);
 		}
 		length_is_enabled[CH2] = enable_length;
@@ -175,14 +166,14 @@ void APU::WriteToAudioReg(u16 addr, u8 data)
 	}
 
 	case Bus::Addr::NR30: // 0xFF1A
-		DAC_is_enabled[CH3] = *NR30 >> 7;
+		DAC_is_enabled[CH3] = data >> 7;
 		if (!DAC_is_enabled[CH3])
 			DisableChannel(CH3);
 		break;
 
 	case Bus::Addr::NR31: // 0xFF1B
 		length[CH3] = data;
-		length_timer[CH3] = 256 - length[CH3];
+		length_counter[CH3] = 256 - length[CH3];
 		break;
 
 	case Bus::Addr::NR32: // 0xFF1C
@@ -202,10 +193,10 @@ void APU::WriteToAudioReg(u16 addr, u8 data)
 		bool enable_length = data & 0x40;
 
 		if (first_half_of_length_period && enable_length &&
-			!length_is_enabled[CH3] && length_timer[CH3] > 0)
+			!length_is_enabled[CH3] && length_counter[CH3] > 0)
 		{
-			length_timer[CH3]--;
-			if (length_timer[CH3] == 0)
+			length_counter[CH3]--;
+			if (length_counter[CH3] == 0)
 				DisableChannel(CH3);
 		}
 		length_is_enabled[CH3] = enable_length;
@@ -218,7 +209,7 @@ void APU::WriteToAudioReg(u16 addr, u8 data)
 
 	case Bus::Addr::NR41: // 0xFF20
 		length[CH4] = data & 0x3F;
-		length_timer[CH4] = 64 - length[CH4];
+		length_counter[CH4] = 64 - length[CH4];
 		break;
 
 	case Bus::Addr::NR42: // 0xFF21
@@ -236,10 +227,10 @@ void APU::WriteToAudioReg(u16 addr, u8 data)
 		bool enable_length = data & 0x40;
 
 		if (first_half_of_length_period && enable_length &&
-			!length_is_enabled[CH4] && length_timer[CH4] > 0)
+			!length_is_enabled[CH4] && length_counter[CH4] > 0)
 		{
-			length_timer[CH4]--;
-			if (length_timer[CH4] == 0)
+			length_counter[CH4]--;
+			if (length_counter[CH4] == 0)
 				DisableChannel(CH4);
 		}
 		length_is_enabled[CH4] = enable_length;
@@ -267,6 +258,32 @@ void APU::WriteToAudioReg(u16 addr, u8 data)
 }
 
 
+u8 APU::ReadFromWaveRam(u16 addr)
+{
+	// Reading from wave ram BY THE CPU when the wave channel is enabled gives special behaviour
+	// It is equivalent to accessing the current byte selected by the waveform position (https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware)
+	if (this->enabled && channel_is_enabled[CH3])
+	{
+		if (!wave_ram_accessible_by_cpu_when_ch3_enabled)
+			return 0xFF;
+		addr = Bus::Addr::WAV_START + wave_pos[CH3] / 2;
+	}
+	return bus->Read(addr, false, true);
+}
+
+
+void APU::WriteToWaveRam(u16 addr, u8 data)
+{
+	if (this->enabled && channel_is_enabled[CH3])
+	{
+		if (!wave_ram_accessible_by_cpu_when_ch3_enabled)
+			return;
+		addr = Bus::Addr::WAV_START + wave_pos[CH3] / 2;
+	}
+	bus->Write(addr, data, false, true);
+}
+
+
 void APU::DisableAPU()
 {
 	ResetAllRegisters();
@@ -276,6 +293,15 @@ void APU::DisableAPU()
 
 void APU::EnableAPU()
 {
+	// On CGB, length counters are reset when powered up.
+	// On DMG, they are unaffected, and not clocked.
+	// source: blargg test rom 'dmg_sound' -- '08-len ctr during power'
+	if (System::mode == System::Mode::CGB)
+	{
+		for (int i = 0; i < 4; i++)
+			length_counter[i] = 0;
+	}
+
 	frame_seq_step_counter = 0;
 	this->enabled = true;
 }
@@ -289,6 +315,13 @@ void APU::Update()
 		{
 			Sample();
 			t_cycles_until_sample = t_cycles_per_sample;
+		}
+
+		if (wave_ram_accessible_by_cpu_when_ch3_enabled)
+		{
+			t_cycles_since_ch3_read_wave_ram++;
+			if (t_cycles_since_ch3_read_wave_ram == t_cycles_until_cpu_cant_read_wave_ram)
+				wave_ram_accessible_by_cpu_when_ch3_enabled = false;
 		}
 
 		if (!enabled) continue;
@@ -336,13 +369,11 @@ void APU::StepChannel2()
 void APU::StepChannel3()
 {
 	freq_timer[CH3] = (2048 - freq[CH3]) * 2;
-	if (set_ch3_wave_pos_to_one_after_sample)
-	{
-		wave_pos[CH3] = 1;
-		set_ch3_wave_pos_to_one_after_sample = false;
-	}
-	else
-		wave_pos[CH3] = (wave_pos[CH3] + 1) & 31;
+	wave_pos[CH3] = (wave_pos[CH3] + 1) & 31;
+	ch3_sample_buffer = bus->Read(Bus::Addr::WAV_START + wave_pos[CH3] / 2, false, true);
+
+	wave_ram_accessible_by_cpu_when_ch3_enabled = true;
+	t_cycles_since_ch3_read_wave_ram = 0;
 }
 
 
@@ -379,7 +410,7 @@ f32 APU::GetChannel3Amplitude()
 {
 	if (channel_is_enabled[CH3] && DAC_is_enabled[CH3])
 	{
-		u8 sample = bus->Read(Bus::Addr::WAV_START + wave_pos[CH3] / 2);
+		u8 sample = ch3_sample_buffer;
 		if (wave_pos[CH3] % 2)
 			sample &= 0xF;
 		else
@@ -429,8 +460,7 @@ void APU::StepFrameSequencer()
 
 void APU::Trigger(Channel channel)
 {
-	if (DAC_is_enabled[channel])
-		EnableChannel(channel);
+	DAC_is_enabled[channel] ? EnableChannel(channel) : DisableChannel(channel);
 
 	if (channel == CH1)
 		EnableSweep();
@@ -441,12 +471,21 @@ void APU::Trigger(Channel channel)
 	if (channel == CH4)
 		LFSR = 0x7FFF; // all (15) bits are set to 1
 
-	if (length_timer[channel] == 0)
+	if (length_counter[channel] == 0)
 	{
-		length_timer[channel] = (channel == CH3) ? 256 : 64;
+		length_counter[channel] = (channel == CH3) ? 256 : 64;
 		if (length_is_enabled[channel] && first_half_of_length_period)
-			length_timer[channel]--;
+			length_counter[channel]--;
 	}
+
+	// When triggering a square channel, the low two bits of the frequency timer are NOT modified (https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware)
+	if (channel <= CH2)
+		freq_timer[channel] = (freq_timer[channel] & 3) | (freq[channel] & ~3);
+	else
+		freq_timer[channel] = freq[channel];
+
+	if (channel != CH4)
+		wave_pos[channel] = 0;
 }
 
 
@@ -593,10 +632,10 @@ u16 APU::ComputeNewSweepFreq()
 
 void APU::StepLength(Channel channel)
 {
-	if (length_is_enabled[channel] && length_timer[channel] > 0)
+	if (length_is_enabled[channel] && length_counter[channel] > 0)
 	{
-		length_timer[channel]--;
-		if (length_timer[channel] == 0)
+		length_counter[channel]--;
+		if (length_counter[channel] == 0)
 			DisableChannel(channel);
 	}
 }
