@@ -78,7 +78,7 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access, bool apu_access)
 	// D0000-DFFF - WRAM bank 1-7 (switchable in GBC mode only; in DMG mode always 1)
 	else if (addr <= 0xDFFF)
 	{
-		memory.wram[addr - 0xC000 + current_WRAM_bank * 0x1000] = data;
+		memory.wram[addr - 0xD000 + current_WRAM_bank * 0x1000] = data;
 	}
 
 	// E000h-FDFFh -- ECHO
@@ -430,7 +430,7 @@ u8 BusImpl::Read(u16 addr, bool ppu_access, bool apu_access)
 	// D0000-DFFF - WRAM bank 1-7 (switchable in GBC mode only; in DMG mode always 1)
 	else if (addr >= 0xD000 && addr <= 0xDFFF)
 	{
-		return memory.wram[addr - 0xC000 + current_WRAM_bank * 0x1000];
+		return memory.wram[addr - 0xD000 + current_WRAM_bank * 0x1000];
 	}
 
 	// E000-FDFF -- ECHO
