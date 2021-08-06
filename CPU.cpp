@@ -4,7 +4,8 @@
 
 using namespace Util;
 
-#define AF (A << 8 | F_Z << 7 | F_N << 6 | F_H << 5 | F_C << 4)
+#define  F (F_Z << 7 | F_N << 6 | F_H << 5 | F_C << 4 | 0xF)
+#define AF (A << 8 | F)
 #define BC (B << 8 | C)
 #define DE (D << 8 | E)
 #define HL (H << 8 | L)
@@ -1161,11 +1162,11 @@ void CPU::ExecuteInstruction(u8 opcode)
 
 	case 0xF1: // POP AF
 	{
-		u8 F = bus->Read(SP++);
-		F_Z = CheckBit(F, 7);
-		F_N = CheckBit(F, 6);
-		F_H = CheckBit(F, 5);
-		F_C = CheckBit(F, 4);
+		u8 flags = bus->Read(SP++);
+		F_Z = CheckBit(flags, 7);
+		F_N = CheckBit(flags, 6);
+		F_H = CheckBit(flags, 5);
+		F_C = CheckBit(flags, 4);
 		A = bus->Read(SP++);
 		break;
 	}
@@ -1184,7 +1185,7 @@ void CPU::ExecuteInstruction(u8 opcode)
 
 	case 0xF5: // PUSH AF
 		bus->Write(--SP, A);
-		bus->Write(--SP, F_Z << 7 | F_N << 6 | F_H << 5 | F_C << 4);
+		bus->Write(--SP, F);
 		break;
 
 	case 0xF6: // OR A, d8
@@ -1559,6 +1560,10 @@ unsigned CPU::OneInstruction()
 	m_cycles_instr = 0;
 	ExecuteInstruction(opcode); // note: 'm_cycles_instr' is incremented in ExecuteInstruction() when the opcode is prefixed
 	m_cycles_instr += opcode_m_cycle_len[opcode] + action_taken * opcode_m_cycle_len_jump[opcode];
+	if (m_cycles_instr == 0)
+	{
+		int a = 3;
+	}
 	
 	action_taken = false;
 
