@@ -12,13 +12,13 @@ The Nintendo Game Boy is a handheld video game system initially released in 1989
 # Current features
 - OK-ish game compatibility (including MBC1, MBC2, MBC3 (untested) and MBC5 carts)
 - A listbox for displaying and selecting games.
+- Audio output.
 - Configurable input bindings.
 - Colour scheme configuration with 13 selectable predefined palettes.
 - All configuration settings are saved to disk, and loaded every time the application is started. 
 - Game save data is saved to disk for games that utilize battery-buffered external cartridge RAM (however, this has not been tested much yet). 
 
 # WIP features (incomplete or non-functioning)
-- Audio output (incomplete).
 - Save states (incomplete).
 - Controller input support (incomplete and non-functioning).
 
@@ -33,6 +33,7 @@ The emulator passes the following tests:
 
 # Known bugs and issues
 - Some minor graphical issues.
+- Certain sound effects in some games sound a bit off.
 - Controller input is not detected at all.
 
 # Notes on usage
