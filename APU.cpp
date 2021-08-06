@@ -2,8 +2,6 @@
 
 using namespace Util;
 
-///// WIP //////
-
 void APU::Initialize()
 {
 	NR10 = bus->ReadIOPointer(Bus::Addr::NR10);
@@ -393,7 +391,7 @@ void APU::StepChannel4()
 f32 APU::GetChannel1Amplitude()
 {
 	if (channel_is_enabled[CH1] && DAC_is_enabled[CH1])
-		return square_wave_duty_table[duty[CH1]][wave_pos[CH1]] / 7.5f - 1.0f;
+		return square_wave_duty_table[duty[CH1]][wave_pos[CH1]] * volume[CH1] / 7.5f - 1.0f;
 	return 0.0f;
 }
 
@@ -401,7 +399,7 @@ f32 APU::GetChannel1Amplitude()
 f32 APU::GetChannel2Amplitude()
 {
 	if (channel_is_enabled[CH2] && DAC_is_enabled[CH2])
-		return square_wave_duty_table[duty[CH2]][wave_pos[CH2]] / 7.5f - 1.0f;
+		return square_wave_duty_table[duty[CH2]][wave_pos[CH2]] * volume[CH2] / 7.5f - 1.0f;
 	return 0.0f;
 }
 
@@ -426,7 +424,7 @@ f32 APU::GetChannel3Amplitude()
 f32 APU::GetChannel4Amplitude()
 {
 	if (channel_is_enabled[CH4] && DAC_is_enabled[CH4])
-		return (~LFSR & 1) / 7.5f - 1.0f;
+		return (~LFSR & 1) * volume[CH4] / 7.5f - 1.0f;
 	return 0.0f;
 }
 
@@ -645,10 +643,11 @@ void APU::Sample()
 {
 	f32 right_output = 0.0f, left_output = 0.0f;
 
-	ch_output[CH1] = GetChannel1Amplitude() * volume[CH1];
-	ch_output[CH2] = GetChannel2Amplitude() * volume[CH2];
-	ch_output[CH3] = GetChannel3Amplitude()              ;
-	ch_output[CH4] = GetChannel4Amplitude() * volume[CH4];
+	f32 ch_output[4];
+	ch_output[CH1] = GetChannel1Amplitude();
+	ch_output[CH2] = GetChannel2Amplitude();
+	ch_output[CH3] = GetChannel3Amplitude();
+	ch_output[CH4] = GetChannel4Amplitude();
 
 	for (int i = 0; i < 4; i++)
 	{

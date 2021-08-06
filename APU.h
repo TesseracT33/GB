@@ -5,10 +5,6 @@
 #include "Bus.h"
 #include "Utils.h"
 
-///// WIP //////
-
-//#define CH1_DEBUG
-
 class APU final : public Serializable
 {
 public:
@@ -98,7 +94,6 @@ private:
 	unsigned t_cycles_since_ch3_read_wave_ram = 0;
 	const unsigned t_cycles_until_cpu_cant_read_wave_ram = 3;
 
-	f32 ch_output[4]{};
 	f32 sample_buffer[sample_buffer_size]{};
 	
 	SDL_AudioSpec audio_spec;
