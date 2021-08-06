@@ -2,8 +2,8 @@
 
 #include <wx/wx.h>
 #include <wx/button.h>
+#include <wx/log.h>
 #include <wx/stattext.h>
-#include <wx/combobox.h>
 
 #include "Config.h"
 #include "Emulator.h"
@@ -70,7 +70,8 @@ private:
 	void OnJoyDown(wxJoystickEvent& event);
 	void OnButtonLostFocus(wxFocusEvent& event);
 
-	void GetButtonLabels();
+	void GetAndSetButtonLabels();
+	void CheckForDuplicateBindings(const char* new_bound_key_name);
 	SDL_Keycode Convert_WX_Keycode_To_SDL_Keycode(int wx_keycode);
 	u8 Convert_WX_Joybutton_To_SDL_Joybutton(int wx_joybutton);
 

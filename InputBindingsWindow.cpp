@@ -44,10 +44,13 @@ InputBindingsWindow::InputBindingsWindow(wxWindow* parent, Config* config, Joypa
 	button_save_and_exit   = new wxButton(this, ID_SAVE_AND_EXIT  , "Save and exit"  , wxPoint(padding + button_options_size.x, end_of_input_buttons_y + button_options_size.y), button_options_size);
 
 	// setup image
-	wxImage::AddHandler(new wxPNGHandler());
-	image = new wxStaticBitmap(this, wxID_ANY, wxBitmap("Gameboy_front.png", wxBITMAP_TYPE_PNG), wxPoint(padding + label_size.x + 2 * button_size.x, 0));
+	{
+		wxLogNull logNo;
+		wxImage::AddHandler(new wxPNGHandler());
+		image = new wxStaticBitmap(this, wxID_ANY, wxBitmap("Gameboy_front.png", wxBITMAP_TYPE_PNG), wxPoint(padding + label_size.x + 2 * button_size.x, 0));
+	}
 
-	GetButtonLabels();
+	GetAndSetButtonLabels();
 
 	SetBackgroundColour(*wxWHITE);
 
@@ -104,6 +107,7 @@ void InputBindingsWindow::OnKeyDown(wxKeyEvent& event)
 				const char* name = SDL_GetKeyName(sdl_keycode);
 				buttons_keyboard[index_of_awaited_input_button]->SetLabel(name);
 				joypad->UpdateBinding(static_cast<Joypad::Button>(index_of_awaited_input_button), sdl_keycode);
+				CheckForDuplicateBindings(name);
 				return;
 			}
 		}
@@ -128,6 +132,7 @@ void InputBindingsWindow::OnJoyDown(wxJoystickEvent& event)
 				const char* name = SDL_GetKeyName(sdl_keycode);
 				buttons_keyboard[index_of_awaited_input_button]->SetLabel(name);
 				joypad->UpdateBinding(static_cast<Joypad::Button>(index_of_awaited_input_button), sdl_keycode);
+				CheckForDuplicateBindings(name);
 				return;
 			}
 		}
@@ -155,14 +160,14 @@ void InputBindingsWindow::OnButtonLostFocus(wxFocusEvent& event)
 void InputBindingsWindow::OnResetKeyboard(wxCommandEvent& event)
 {
 	joypad->ResetBindings(Joypad::InputMethod::KEYBOARD);
-	GetButtonLabels();
+	GetAndSetButtonLabels();
 }
 
 
 void InputBindingsWindow::OnResetJoypad(wxCommandEvent& event)
 {
 	joypad->ResetBindings(Joypad::InputMethod::JOYPAD);
-	GetButtonLabels();
+	GetAndSetButtonLabels();
 }
 
 
@@ -191,7 +196,7 @@ void InputBindingsWindow::OnCloseWindow(wxCloseEvent& event)
 }
 
 
-void InputBindingsWindow::GetButtonLabels()
+void InputBindingsWindow::GetAndSetButtonLabels()
 {
 	buttons_keyboard[0]->SetLabel(joypad->GetCurrentBindingString(Joypad::Button::A, Joypad::InputMethod::KEYBOARD));
 	buttons_keyboard[1]->SetLabel(joypad->GetCurrentBindingString(Joypad::Button::B, Joypad::InputMethod::KEYBOARD));
@@ -273,8 +278,17 @@ SDL_Keycode InputBindingsWindow::Convert_WX_Keycode_To_SDL_Keycode(int wx_keycod
 }
 
 
-u8 Convert_WX_Joybutton_To_SDL_Joybutton(int wx_joybutton)
+u8 InputBindingsWindow::Convert_WX_Joybutton_To_SDL_Joybutton(int wx_joybutton)
 {
 	// todo
 	return 0;
+}
+
+
+void InputBindingsWindow::CheckForDuplicateBindings(const char* new_bound_key_name)
+{
+	for (int button_id = 0; button_id <= 2 * NUM_INPUT_KEYS; button_id++)
+	{
+
+	}
 }
