@@ -11,9 +11,6 @@
 
 class APU final : public Serializable
 {
-#ifdef CH1_DEBUG
-	std::ofstream ofs{ "apu_debug.txt", std::ofstream::out };
-#endif
 public:
 	enum Channel : u8 { CH1, CH2, CH3, CH4 };
 

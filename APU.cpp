@@ -650,13 +650,6 @@ void APU::Sample()
 	ch_output[CH3] = GetChannel3Amplitude()              ;
 	ch_output[CH4] = GetChannel4Amplitude() * volume[CH4];
 
-#ifdef CH1_DEBUG
-	char buf[200]{};
-	sprintf(buf, "amp: %f   vol: %i   out: %f   len: %i   freq: %i",
-		GetChannel1Amplitude(), (int)volume[0], ch_output[CH1], (int)length_timer[0], (int)freq_timer[0]);
-	ofs << buf << std::endl;
-#endif
-
 	for (int i = 0; i < 4; i++)
 	{
 		if (CheckBit(NR51, i) == 1)

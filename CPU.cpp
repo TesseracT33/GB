@@ -1560,10 +1560,6 @@ unsigned CPU::OneInstruction()
 	m_cycles_instr = 0;
 	ExecuteInstruction(opcode); // note: 'm_cycles_instr' is incremented in ExecuteInstruction() when the opcode is prefixed
 	m_cycles_instr += opcode_m_cycle_len[opcode] + action_taken * opcode_m_cycle_len_jump[opcode];
-	if (m_cycles_instr == 0)
-	{
-		int a = 3;
-	}
 	
 	action_taken = false;
 
