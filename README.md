@@ -34,7 +34,6 @@ The emulator passes the following tests:
 # Known bugs and issues
 - Some minor graphical issues.
 - Controller input is not detected at all.
-- When you open the input binding window, a wxWidgets warning is displayed.
 
 # Notes on usage
 It is optional to supply a boot rom for the emulator. The boot rom for the original Game Boy should have file extension .gb and be 256 bytes in size. You can supply the emulator with it from within the GUI. 
