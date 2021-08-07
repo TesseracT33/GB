@@ -2,14 +2,17 @@
 
 #include <fstream>
 #include <queue>
+#include <string>
 #include <typeinfo>
+#include <vector>
 
 class Serialization
 {
 public:
+	// A functor which can either do serialization via an ofstream, or deserialization via an ifstream
 	struct BaseFunctor
 	{
-		virtual void fun(void* thing, size_t size) = 0;
+		virtual void fun(void* obj, size_t size) = 0;
 	};
 
 	struct SerializeFunctor final : public BaseFunctor
@@ -30,6 +33,7 @@ public:
 		void fun(void* obj, size_t size) override { ifs.read((char*)obj, size); };
 	};
 
+	// serialize or deserialize an std::string (depending on the functor)
 	static void STD_string(Serialization::BaseFunctor& functor, std::string& string)
 	{
 		if (typeid(functor).hash_code() == typeid(serialize_functor_inst).hash_code())
@@ -52,6 +56,7 @@ public:
 		}
 	}
 
+	// serialize or deserialize an std::vector (depending on the functor)
 	template<typename T>
 	static void STD_vector(Serialization::BaseFunctor& functor, std::vector<T>& vector)
 	{
@@ -80,6 +85,7 @@ public:
 		}
 	}
 
+	// serialize or deserialize an std::queue (depending on the functor)
 	template<typename T>
 	static void STD_queue(Serialization::BaseFunctor& functor, std::queue<T>& queue)
 	{
@@ -113,6 +119,8 @@ public:
 	}
 
 private:
+	// These are only used for comparing the hashcode of an instance of a supplied 'BaseFunctor' in any of the above serialization functions,
+	// to either 'SerializeFunctor' or 'DeserializeFunctor'
 	static std::ofstream ofs;
 	static std::ifstream ifs;
 	static SerializeFunctor serialize_functor_inst;
