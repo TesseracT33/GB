@@ -29,7 +29,7 @@ public:
 		std::ifstream& ifs;
 
 		DeserializeFunctor(std::ifstream& _ifs) : ifs(_ifs) {};
-
+		
 		void fun(void* obj, size_t size) override { ifs.read((char*)obj, size); };
 	};
 
@@ -49,7 +49,7 @@ public:
 			// deserialization
 			size_t size;
 			functor.fun(&size, sizeof(size_t));
-			char* c_str = new char[size];
+			char* c_str = new char[size + 1]{};
 			functor.fun(c_str, size * sizeof(char));
 			string = std::string(c_str);
 			delete[] c_str;
