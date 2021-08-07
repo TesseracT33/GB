@@ -53,6 +53,7 @@ private:
 
 	static const int sample_rate = 65536;
 	static const int sample_buffer_size = 2048;
+	const unsigned t_cycles_until_cpu_cant_read_wave_ram = 3;
 	const u8 ch3_output_level_shift[4] = { 4, 0, 1, 2 };
 	const u8 ch4_divisors[8] = { 8, 16, 32, 48, 64, 80, 96, 112 }; // maps divisor codes to divisors in CH4 freq timer calculation
 
@@ -69,6 +70,7 @@ private:
 
 	bool wave_ram_accessible_by_cpu_when_ch3_enabled = true;
 	bool first_half_of_length_period = false;
+
 	bool channel_is_enabled[4]{};
 	bool DAC_is_enabled[4]{};
 	bool length_is_enabled[4]{};
@@ -93,7 +95,6 @@ private:
 	unsigned t_cycles_per_sample = (System::t_cycles_per_sec_base * System::speed_mode) / sample_rate; // todo: needs to be reset when speed_mode is changed
 	unsigned t_cycles_until_sample = t_cycles_per_sample;
 	unsigned t_cycles_since_ch3_read_wave_ram = 0;
-	const unsigned t_cycles_until_cpu_cant_read_wave_ram = 3;
 
 	f32 sample_buffer[sample_buffer_size]{};
 	

@@ -680,7 +680,40 @@ void APU::Sample()
 
 void APU::State(Serialization::BaseFunctor& functor)
 {
+	functor.fun(&enabled, sizeof(bool));
 
+	functor.fun(envelope, sizeof(Envelope) * std::size(envelope));
+	functor.fun(&sweep, sizeof(Sweep));
+
+	functor.fun(&wave_ram_accessible_by_cpu_when_ch3_enabled, sizeof(bool));
+	functor.fun(&first_half_of_length_period, sizeof(bool));
+
+	functor.fun(channel_is_enabled, sizeof(bool) * std::size(channel_is_enabled));
+	functor.fun(DAC_is_enabled, sizeof(bool) * std::size(DAC_is_enabled));
+	functor.fun(length_is_enabled, sizeof(bool) * std::size(length_is_enabled));
+
+	functor.fun(&ch3_output_level, sizeof(u8));
+	functor.fun(&ch3_sample_buffer, sizeof(u8));
+	functor.fun(&frame_seq_step_counter, sizeof(u8));
+	functor.fun(&sample_counter, sizeof(u8));
+
+	functor.fun(duty, sizeof(u8) * std::size(duty));
+	functor.fun(length, sizeof(u8) * std::size(length));
+	functor.fun(volume, sizeof(u8) * std::size(volume));
+	functor.fun(wave_pos, sizeof(u8) * std::size(wave_pos));
+
+	functor.fun(&LFSR, sizeof(u16));
+
+	functor.fun(freq, sizeof(u16) * std::size(freq));
+	functor.fun(freq_timer, sizeof(u16) * std::size(freq_timer));
+	functor.fun(length_counter, sizeof(u16) * std::size(length_counter));
+
+	functor.fun(&sample_buffer_index, sizeof(unsigned));
+	functor.fun(&t_cycles_per_sample, sizeof(unsigned));
+	functor.fun(&t_cycles_until_sample, sizeof(unsigned));
+	functor.fun(&t_cycles_since_ch3_read_wave_ram, sizeof(unsigned));
+
+	functor.fun(sample_buffer, sizeof(f32) * std::size(sample_buffer));
 }
 
 
