@@ -5,7 +5,7 @@
 #include "Bus.h"
 #include "Utils.h"
 
-class APU final : public Serializable
+class APU final : public Component
 {
 public:
 	enum Channel : u8 { CH1, CH2, CH3, CH4 };
@@ -23,8 +23,9 @@ public:
 	u8 ReadFromWaveRam(u16 addr);
 	void WriteToWaveRam(u16 addr, u8 data);
 
-	void Serialize(std::ofstream& ofs) override;
-	void Deserialize(std::ifstream& ifs) override;
+	void State(Serialization::BaseFunctor& functor) override;
+	void Configure(Serialization::BaseFunctor& functor) override;
+	void SetDefaultConfig() override;
 
 private:
 	struct Envelope

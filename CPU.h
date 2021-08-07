@@ -10,7 +10,7 @@
 //#define DEBUG
 #define DEBUG_LOG_PATH "F:\\debug.txt"
 
-class CPU final : public Serializable
+class CPU final : public Component
 {
 
 #ifdef DEBUG
@@ -36,8 +36,7 @@ public:
 	void ExitSpeedSwitch();
 	void RequestInterrupt(CPU::Interrupt interrupt);
 
-	void Serialize(std::ofstream& ofs) override;
-	void Deserialize(std::ifstream& ifs) override;
+	void State(Serialization::BaseFunctor& functor) override;
 
 private:
 	// registers

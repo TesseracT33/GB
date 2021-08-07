@@ -164,47 +164,6 @@ void GUI::QuitGame()
 }
 
 
-void GUI::LoadConfig(std::ifstream& ifs)
-{
-	// read wxString 'rom_folder_path' from config.bin by first reading its length and then its actual data
-	// todo: I would like to use char16_t instead of wchar_t here, but not sure how to safely convert between wxString and char16_t
-	size_t str_len = 0; // length in wide characters, not bytes
-	ifs.read((char*)&str_len, sizeof(str_len));
-	if (str_len > maximum_rom_path_length)
-	{
-		wxMessageBox(wxString::Format("Error: cannot read config file; rom directory is longer than the maximum allowed %i characters.", maximum_rom_path_length));
-		rom_folder_path = default_rom_folder_path;
-		return;
-	}
-	wchar_t str[maximum_rom_path_length]{};
-	ifs.read((char*)str, str_len * sizeof(wchar_t));
-	rom_folder_path = wxString(str);
-
-	ifs.read((char*)&display_only_gb_gbc_files, sizeof(bool));
-	ifs.read((char*)&generate_random_colour_palette_on_every_boot, sizeof(bool));
-}
-
-
-void GUI::SaveConfig(std::ofstream& ofs)
-{
-	const wchar_t* str = rom_folder_path.wc_str();
-	size_t str_len = std::wcslen(str);
-	ofs.write((char*)&str_len, sizeof(str_len));
-	ofs.write((char*)str, str_len * sizeof(wchar_t));
-
-	ofs.write((char*)&display_only_gb_gbc_files, sizeof(bool));
-	ofs.write((char*)&generate_random_colour_palette_on_every_boot, sizeof(bool));
-}
-
-
-void GUI::SetDefaultConfig()
-{
-	rom_folder_path = default_rom_folder_path;
-	display_only_gb_gbc_files = default_display_only_gb_gbc_files;
-	generate_random_colour_palette_on_every_boot = default_generate_random_colour_palette_on_every_boot;
-}
-
-
 // returns true if successful
 bool GUI::SetupSDL()
 {
@@ -851,6 +810,12 @@ void GUI::OnKeyDown(wxKeyEvent& event)
 }
 
 
+void GUI::OnJoyDown(wxJoystickEvent& event)
+{
+	event.Skip();
+}
+
+
 void GUI::ToggleFullScreen()
 {
 	if (!emulator.emu_is_running) return;
@@ -965,4 +930,23 @@ int GUI::GetSpeedFromMenuBarID(int id) const
 	case MenuBarID::speed_500: return 500;
 	default: return PRESPECIFIED_SPEED_NOT_FOUND;
 	}
+}
+
+
+void GUI::Configure(Serialization::BaseFunctor& functor)
+{
+	std::string str = rom_folder_path.ToStdString();
+	Serialization::STD_string(functor, str);
+	rom_folder_path = wxString(str);
+
+	functor.fun(&display_only_gb_gbc_files, sizeof(bool));
+	functor.fun(&generate_random_colour_palette_on_every_boot, sizeof(bool));
+}
+
+
+void GUI::SetDefaultConfig()
+{
+	rom_folder_path = default_rom_folder_path;
+	display_only_gb_gbc_files = default_display_only_gb_gbc_files;
+	generate_random_colour_palette_on_every_boot = default_generate_random_colour_palette_on_every_boot;
 }

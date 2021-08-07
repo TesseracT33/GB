@@ -45,7 +45,7 @@ InputBindingsWindow::InputBindingsWindow(wxWindow* parent, Config* config, Joypa
 
 	// setup image
 	{
-		wxLogNull logNo;
+		wxLogNull logNo; // stops wxwidgets from logging a message about the png when the window is opened
 		wxImage::AddHandler(new wxPNGHandler());
 		image = new wxStaticBitmap(this, wxID_ANY, wxBitmap("Gameboy_front.png", wxBITMAP_TYPE_PNG), wxPoint(padding + label_size.x + 2 * button_size.x, 0));
 	}

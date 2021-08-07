@@ -167,49 +167,25 @@ void DMA::Update()
 }
 
 
-void DMA::Deserialize(std::ifstream& ifs)
+void DMA::State(Serialization::BaseFunctor& functor)
 {
-	ifs.read((char*)&DMA_transfer_active, sizeof(bool));
-	ifs.read((char*)&DMA_source_addr, sizeof(u16));
-	ifs.read((char*)&DMA_written_bytes, sizeof(int));
-	
-	ifs.read((char*)&HDMA_transfer_active, sizeof(bool));
-	ifs.read((char*)&HDMA_currently_copying_block, sizeof(bool));
-	ifs.read((char*)&HDMA_transfer_started_when_lcd_off, sizeof(bool));
-	ifs.read((char*)&HDMA_source_addr, sizeof(u16));
-	ifs.read((char*)&HDMA_dest_addr, sizeof(u16));
-	ifs.read((char*)&HDMA_current_block_copy_byte_index, sizeof(u8));
-	ifs.read((char*)&HDMA_written_blocks, sizeof(int));
-	ifs.read((char*)&HDMA_written_blocks_total, sizeof(int));
-	ifs.read((char*)&HDMA_corrupted_bytes_written, sizeof(int));
+	functor.fun(&DMA_transfer_active, sizeof(bool));
+	functor.fun(&DMA_source_addr, sizeof(u16));
+	functor.fun(&DMA_written_bytes, sizeof(int));
 
-	ifs.read((char*)&GDMA_transfer_active, sizeof(bool));
-	ifs.read((char*)&GDMA_written_blocks_total, sizeof(u8));
-	ifs.read((char*)&GDMA_written_blocks, sizeof(u8));
-	ifs.read((char*)&GDMA_corrupted_bytes_written, sizeof(int));
-	ifs.read((char*)&GDMA_current_block_copy_byte_index, sizeof(u8));
-}
+	functor.fun(&HDMA_transfer_active, sizeof(bool));
+	functor.fun(&HDMA_currently_copying_block, sizeof(bool));
+	functor.fun(&HDMA_transfer_started_when_lcd_off, sizeof(bool));
+	functor.fun(&HDMA_source_addr, sizeof(u16));
+	functor.fun(&HDMA_dest_addr, sizeof(u16));
+	functor.fun(&HDMA_current_block_copy_byte_index, sizeof(u8));
+	functor.fun(&HDMA_written_blocks, sizeof(int));
+	functor.fun(&HDMA_written_blocks_total, sizeof(int));
+	functor.fun(&HDMA_corrupted_bytes_written, sizeof(int));
 
-
-void DMA::Serialize(std::ofstream& ofs)
-{
-	ofs.write((char*)&DMA_transfer_active, sizeof(bool));
-	ofs.write((char*)&DMA_source_addr, sizeof(u16));
-	ofs.write((char*)&DMA_written_bytes, sizeof(int));
-
-	ofs.write((char*)&HDMA_transfer_active, sizeof(bool));
-	ofs.write((char*)&HDMA_currently_copying_block, sizeof(bool));
-	ofs.write((char*)&HDMA_transfer_started_when_lcd_off, sizeof(bool));
-	ofs.write((char*)&HDMA_source_addr, sizeof(u16));
-	ofs.write((char*)&HDMA_dest_addr, sizeof(u16));
-	ofs.write((char*)&HDMA_current_block_copy_byte_index, sizeof(u8));
-	ofs.write((char*)&HDMA_written_blocks, sizeof(int));
-	ofs.write((char*)&HDMA_written_blocks_total, sizeof(int));
-	ofs.write((char*)&HDMA_corrupted_bytes_written, sizeof(int));
-
-	ofs.write((char*)&GDMA_transfer_active, sizeof(bool));
-	ofs.write((char*)&GDMA_written_blocks_total, sizeof(u8));
-	ofs.write((char*)&GDMA_written_blocks, sizeof(u8));
-	ofs.write((char*)&GDMA_corrupted_bytes_written, sizeof(int));
-	ofs.write((char*)&GDMA_current_block_copy_byte_index, sizeof(u8));
+	functor.fun(&GDMA_transfer_active, sizeof(bool));
+	functor.fun(&GDMA_written_blocks_total, sizeof(u8));
+	functor.fun(&GDMA_written_blocks, sizeof(u8));
+	functor.fun(&GDMA_corrupted_bytes_written, sizeof(int));
+	functor.fun(&GDMA_current_block_copy_byte_index, sizeof(u8));
 }

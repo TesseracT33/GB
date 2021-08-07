@@ -49,19 +49,10 @@ void Serial::Update()
 }
 
 
-void Serial::Serialize(std::ofstream& ofs)
+void Serial::State(Serialization::BaseFunctor& functor)
 {
-	ofs.write((char*)&transfer_active, sizeof(bool));
-	ofs.write((char*)&outgoing_byte, sizeof(u8));
-	ofs.write((char*)&bits_transferred, sizeof(u8));
-	ofs.write((char*)&m_cycles_until_transfer_update, sizeof(unsigned));
-}
-
-
-void Serial::Deserialize(std::ifstream& ifs)
-{
-	ifs.read((char*)&transfer_active, sizeof(bool));
-	ifs.read((char*)&outgoing_byte, sizeof(u8));
-	ifs.read((char*)&bits_transferred, sizeof(u8));
-	ifs.read((char*)&m_cycles_until_transfer_update, sizeof(unsigned));
+	functor.fun(&transfer_active, sizeof(bool));
+	functor.fun(&outgoing_byte, sizeof(u8));
+	functor.fun(&bits_transferred, sizeof(u8));
+	functor.fun(&m_cycles_until_transfer_update, sizeof(unsigned));
 }

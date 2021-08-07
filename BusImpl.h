@@ -10,7 +10,7 @@
 #include "Timer.h"
 #include "Utils.h"
 
-class BusImpl final : public Bus, public Serializable
+class BusImpl final : public Bus, public Component
 {
 public:
 	APU* apu;
@@ -28,15 +28,14 @@ public:
 	u8*  ReadIOPointer(u16 addr);
 	void Reset(bool execute_boot_rom);
 
-	void Serialize(std::ofstream& ofs);
-	void Deserialize(std::ifstream& ifs);
-
 	void InitiateSpeedSwitch();
 	void ExitSpeedSwitch();
 
 	void ResetDIV();
 
 	u16 GetCurrentRomBank();
+
+	void State(Serialization::BaseFunctor& functor) override;
 
 private:
 	struct Memory

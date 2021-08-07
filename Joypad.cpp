@@ -86,38 +86,38 @@ void Joypad::UpdateBinding(Button button, SDL_Keycode key)
 {
 	switch (button)
 	{
-	case Button::A     : new_KeyboardBindings.A      = key; break;
-	case Button::B     : new_KeyboardBindings.B      = key; break;
-	case Button::SELECT: new_KeyboardBindings.SELECT = key; break;
-	case Button::START : new_KeyboardBindings.START  = key; break;
-	case Button::RIGHT : new_KeyboardBindings.RIGHT  = key; break;
-	case Button::LEFT  : new_KeyboardBindings.LEFT   = key; break;
-	case Button::UP    : new_KeyboardBindings.UP     = key; break;
-	case Button::DOWN  : new_KeyboardBindings.DOWN   = key; break;
+	case Button::A     : new_keyboard_bindings.A      = key; break;
+	case Button::B     : new_keyboard_bindings.B      = key; break;
+	case Button::SELECT: new_keyboard_bindings.SELECT = key; break;
+	case Button::START : new_keyboard_bindings.START  = key; break;
+	case Button::RIGHT : new_keyboard_bindings.RIGHT  = key; break;
+	case Button::LEFT  : new_keyboard_bindings.LEFT   = key; break;
+	case Button::UP    : new_keyboard_bindings.UP     = key; break;
+	case Button::DOWN  : new_keyboard_bindings.DOWN   = key; break;
 	}
 }
 
 
 void Joypad::SaveBindings()
 {
-	joypadBindings = new_JoypadBindings;
-	keyboardBindings = new_KeyboardBindings;
+	joypad_bindings = new_JoypadBindings;
+	keyboard_bindings = new_keyboard_bindings;
 }
 
 
 void Joypad::RevertBindingChanges()
 {
-	new_JoypadBindings = joypadBindings;
-	new_KeyboardBindings = keyboardBindings;
+	new_JoypadBindings = joypad_bindings;
+	new_keyboard_bindings = keyboard_bindings;
 }
 
 
 void Joypad::ResetBindings(InputMethod input_method)
 {
 	if (input_method == InputMethod::JOYPAD)
-		new_JoypadBindings = default_JoypadBindings;
+		new_JoypadBindings = default_joypad_bindings;
 	else
-		new_KeyboardBindings = default_KeyboardBindings;
+		new_keyboard_bindings = default_keyboard_bindings;
 }
 
 
@@ -141,41 +141,17 @@ const char* Joypad::GetCurrentBindingString(Button button, InputMethod input_met
 	{
 		switch (button)
 		{
-		case Button::A:      return SDL_GetKeyName(new_KeyboardBindings.A);
-		case Button::B:      return SDL_GetKeyName(new_KeyboardBindings.B);
-		case Button::SELECT: return SDL_GetKeyName(new_KeyboardBindings.SELECT);
-		case Button::START:  return SDL_GetKeyName(new_KeyboardBindings.START);
-		case Button::RIGHT:  return SDL_GetKeyName(new_KeyboardBindings.RIGHT);
-		case Button::LEFT:   return SDL_GetKeyName(new_KeyboardBindings.LEFT);
-		case Button::UP:     return SDL_GetKeyName(new_KeyboardBindings.UP);
-		case Button::DOWN:   return SDL_GetKeyName(new_KeyboardBindings.DOWN);
+		case Button::A:      return SDL_GetKeyName(new_keyboard_bindings.A);
+		case Button::B:      return SDL_GetKeyName(new_keyboard_bindings.B);
+		case Button::SELECT: return SDL_GetKeyName(new_keyboard_bindings.SELECT);
+		case Button::START:  return SDL_GetKeyName(new_keyboard_bindings.START);
+		case Button::RIGHT:  return SDL_GetKeyName(new_keyboard_bindings.RIGHT);
+		case Button::LEFT:   return SDL_GetKeyName(new_keyboard_bindings.LEFT);
+		case Button::UP:     return SDL_GetKeyName(new_keyboard_bindings.UP);
+		case Button::DOWN:   return SDL_GetKeyName(new_keyboard_bindings.DOWN);
 		}
 	}
 	return nullptr;
-}
-
-
-void Joypad::LoadConfig(std::ifstream& ifs)
-{
-	ifs.read((char*)&joypadBindings, sizeof(joypadBindings));
-	ifs.read((char*)&keyboardBindings, sizeof(keyboardBindings));
-
-	new_JoypadBindings = joypadBindings;
-	new_KeyboardBindings = keyboardBindings;
-}
-
-
-void Joypad::SaveConfig(std::ofstream& ofs)
-{
-	ofs.write((char*)&joypadBindings, sizeof(joypadBindings));
-	ofs.write((char*)&keyboardBindings, sizeof(keyboardBindings));
-}
-
-
-void Joypad::SetDefaultConfig()
-{
-	joypadBindings = new_JoypadBindings = default_JoypadBindings;
-	keyboardBindings = new_KeyboardBindings = default_KeyboardBindings;
 }
 
 
@@ -185,29 +161,29 @@ void Joypad::MatchInputToBindings(s32 button, InputEvent input_event, InputMetho
 	// Pressing two opposing d-pad directions simultaneously is disallowed
 	if (input_method == InputMethod::JOYPAD)
 	{
-		if      (button == joypadBindings.A)      buttons_currently_held.A      = input_event;
-		else if (button == joypadBindings.B)      buttons_currently_held.B      = input_event;
-		else if (button == joypadBindings.SELECT) buttons_currently_held.SELECT = input_event;
-		else if (button == joypadBindings.START)  buttons_currently_held.START  = input_event;
+		if      (button == joypad_bindings.A)      buttons_currently_held.A      = input_event;
+		else if (button == joypad_bindings.B)      buttons_currently_held.B      = input_event;
+		else if (button == joypad_bindings.SELECT) buttons_currently_held.SELECT = input_event;
+		else if (button == joypad_bindings.START)  buttons_currently_held.START  = input_event;
 
-		else if (button == joypadBindings.RIGHT)  buttons_currently_held.RIGHT  = input_event && !buttons_currently_held.LEFT;
-		else if (button == joypadBindings.LEFT)   buttons_currently_held.LEFT   = input_event && !buttons_currently_held.RIGHT;
-		else if (button == joypadBindings.UP)     buttons_currently_held.UP     = input_event && !buttons_currently_held.DOWN;
-		else if (button == joypadBindings.DOWN)   buttons_currently_held.DOWN   = input_event && !buttons_currently_held.UP;
+		else if (button == joypad_bindings.RIGHT)  buttons_currently_held.RIGHT  = input_event && !buttons_currently_held.LEFT;
+		else if (button == joypad_bindings.LEFT)   buttons_currently_held.LEFT   = input_event && !buttons_currently_held.RIGHT;
+		else if (button == joypad_bindings.UP)     buttons_currently_held.UP     = input_event && !buttons_currently_held.DOWN;
+		else if (button == joypad_bindings.DOWN)   buttons_currently_held.DOWN   = input_event && !buttons_currently_held.UP;
 
 		else return;
 	}
 	else
 	{
-		if      (button == keyboardBindings.A)      buttons_currently_held.A      = input_event;
-		else if (button == keyboardBindings.B)      buttons_currently_held.B      = input_event;
-		else if (button == keyboardBindings.SELECT) buttons_currently_held.SELECT = input_event;
-		else if (button == keyboardBindings.START)  buttons_currently_held.START  = input_event;
+		if      (button == keyboard_bindings.A)      buttons_currently_held.A      = input_event;
+		else if (button == keyboard_bindings.B)      buttons_currently_held.B      = input_event;
+		else if (button == keyboard_bindings.SELECT) buttons_currently_held.SELECT = input_event;
+		else if (button == keyboard_bindings.START)  buttons_currently_held.START  = input_event;
 
-		else if (button == keyboardBindings.RIGHT)  buttons_currently_held.RIGHT  = input_event;
-		else if (button == keyboardBindings.LEFT)   buttons_currently_held.LEFT   = input_event;
-		else if (button == keyboardBindings.UP)     buttons_currently_held.UP     = input_event;
-		else if (button == keyboardBindings.DOWN)   buttons_currently_held.DOWN   = input_event;
+		else if (button == keyboard_bindings.RIGHT)  buttons_currently_held.RIGHT  = input_event;
+		else if (button == keyboard_bindings.LEFT)   buttons_currently_held.LEFT   = input_event;
+		else if (button == keyboard_bindings.UP)     buttons_currently_held.UP     = input_event;
+		else if (button == keyboard_bindings.DOWN)   buttons_currently_held.DOWN   = input_event;
 
 		else return;
 	}
@@ -239,4 +215,18 @@ void Joypad::UpdateP1OutputLines()
 	{
 		cpu->RequestInterrupt(CPU::Interrupt::Joypad);
 	}
+}
+
+
+void Joypad::Configure(Serialization::BaseFunctor& functor)
+{
+	functor.fun(&joypad_bindings, sizeof(joypad_bindings));
+	functor.fun(&keyboard_bindings, sizeof(keyboard_bindings));
+}
+
+
+void Joypad::SetDefaultConfig()
+{
+	joypad_bindings = new_JoypadBindings = default_joypad_bindings;
+	keyboard_bindings = new_keyboard_bindings = default_keyboard_bindings;
 }

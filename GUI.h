@@ -5,6 +5,7 @@
 #include <wx/dir.h>
 #include <wx/filedlg.h>
 #include <wx/filename.h>
+#include <wx/joystick.h>
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/panel.h>
@@ -77,7 +78,6 @@ private:
 
 	static const wxString emulator_name;
 
-	static const int maximum_rom_path_length = 4096;
 	static const int frameID = 10000;
 	static const int listBoxID = 10001;
 	static const int SDLWindowID = 10002;
@@ -144,8 +144,7 @@ private:
 
 	int fps = 0; // current fps that is displayed in the window title
 
-	void LoadConfig(std::ifstream& ifs) override;
-	void SaveConfig(std::ofstream& ofs) override;
+	void Configure(Serialization::BaseFunctor& functor);
 	void SetDefaultConfig() override;
 	void UpdateFPSLabel(int fps) override;
 
@@ -199,6 +198,7 @@ private:
 	void OnWindowSizeChanged(wxSizeEvent& event);
 	void OnClose(wxCloseEvent& event);
 	void OnKeyDown(wxKeyEvent& event);
+	void OnJoyDown(wxJoystickEvent& event);
 
 	wxDECLARE_EVENT_TABLE();
 };

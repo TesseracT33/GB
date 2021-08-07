@@ -25,8 +25,10 @@ void Config::Save()
 		return;
 	}
 
+	Serialization::SerializeFunctor functor{ ofs };
+
 	for (Configurable* configurable : configurables)
-		configurable->SaveConfig(ofs);
+		configurable->Configure(functor);
 
 	ofs.close();
 }
@@ -42,8 +44,10 @@ void Config::Load()
 		return;
 	}
 
+	Serialization::DeserializeFunctor functor{ ifs };
+
 	for (Configurable* configurable : configurables)
-		configurable->LoadConfig(ifs);
+		configurable->Configure(functor);
 
 	ifs.close();
 }

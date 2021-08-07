@@ -3,7 +3,7 @@
 Emulator::Emulator()
 {
 	ConnectSystemComponents();
-	SetupSerializableComponents();
+	BuildComponentVector();
 }
 
 
@@ -57,17 +57,17 @@ void Emulator::ConnectSystemComponents()
 }
 
 
-void Emulator::SetupSerializableComponents()
+void Emulator::BuildComponentVector()
 {
-	serializable_components.push_back(&apu);
-	serializable_components.push_back(&bus);
-	serializable_components.push_back(&cartridge);
-	serializable_components.push_back(&cpu);
-	serializable_components.push_back(&dma);
-	serializable_components.push_back(&ppu);
-	serializable_components.push_back(&serial);
-	serializable_components.push_back(&timer);
-	serializable_components.push_back(this);
+	snapshottable_components.push_back(&apu);
+	snapshottable_components.push_back(&bus);
+	snapshottable_components.push_back(&cartridge);
+	snapshottable_components.push_back(&cpu);
+	snapshottable_components.push_back(&dma);
+	snapshottable_components.push_back(&ppu);
+	snapshottable_components.push_back(&serial);
+	snapshottable_components.push_back(&timer);
+	snapshottable_components.push_back(this);
 }
 
 
@@ -217,8 +217,9 @@ void Emulator::LoadState()
 		return;
 	}
 
-	for (Serializable* serializable : serializable_components)
-		serializable->Deserialize(ifs);
+	Serialization::DeserializeFunctor functor{ ifs };
+	for (Snapshottable* snapshottable : snapshottable_components)
+		snapshottable->State(functor);
 
 	ifs.close();
 	load_state_on_next_cycle = false;
@@ -241,8 +242,9 @@ void Emulator::SaveState()
 		return;
 	}
 
-	for (Serializable* serializable : serializable_components)
-		serializable->Serialize(ofs);
+	Serialization::SerializeFunctor functor{ ofs };
+	for (Snapshottable* snapshottable : snapshottable_components)
+		snapshottable->State(functor);
 
 	ofs.close();
 	save_state_on_next_cycle = false;
@@ -310,31 +312,24 @@ wxSize Emulator::GetWindowSize()
 }
 
 
-void Emulator::LoadConfig(std::ifstream& ifs)
+void Emulator::State(Serialization::BaseFunctor& functor)
 {
-	ifs.read((char*)&load_boot_rom, sizeof(bool));
-	ifs.read((char*)&render_graphics_every_system_frame, sizeof(bool));
-	ifs.read((char*)&emulation_speed_uncapped, sizeof(bool));
-	ifs.read((char*)&emulation_speed, sizeof(unsigned));
-	ifs.read((char*)&target_fps, sizeof(unsigned));
-
-	Util::DeserializeSTDString(dmg_boot_path, ifs);
-	Util::DeserializeSTDString(cgb_boot_path, ifs);
-
-	SetEmulationSpeed(emulation_speed);
+	functor.fun(&m_cycle_counter, sizeof(unsigned));
 }
 
 
-void Emulator::SaveConfig(std::ofstream& ofs)
+void Emulator::Configure(Serialization::BaseFunctor& functor)
 {
-	ofs.write((char*)&load_boot_rom, sizeof(bool));
-	ofs.write((char*)&render_graphics_every_system_frame, sizeof(bool));
-	ofs.write((char*)&emulation_speed_uncapped, sizeof(bool));
-	ofs.write((char*)&emulation_speed, sizeof(unsigned));
-	ofs.write((char*)&target_fps, sizeof(unsigned));
+	functor.fun(&load_boot_rom, sizeof(bool));
+	functor.fun(&render_graphics_every_system_frame, sizeof(bool));
+	functor.fun(&emulation_speed_uncapped, sizeof(bool));
+	functor.fun(&emulation_speed, sizeof(unsigned));
+	functor.fun(&target_fps, sizeof(unsigned));
 
-	Util::SerializeSTDString(dmg_boot_path, ofs);
-	Util::SerializeSTDString(cgb_boot_path, ofs);
+	Serialization::STD_string(functor, dmg_boot_path);
+	Serialization::STD_string(functor, cgb_boot_path);
+
+	SetEmulationSpeed(emulation_speed);
 }
 
 
@@ -344,16 +339,4 @@ void Emulator::SetDefaultConfig()
 	emulation_speed_uncapped = false;
 	emulation_speed = 100;
 	target_fps = 60;
-}
-
-
-void Emulator::Deserialize(std::ifstream& ifs)
-{
-	ifs.read((char*)&m_cycle_counter, sizeof(unsigned));
-}
-
-
-void Emulator::Serialize(std::ofstream& ofs)
-{
-	ofs.write((char*)&m_cycle_counter, sizeof(unsigned));
 }

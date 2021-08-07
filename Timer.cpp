@@ -76,27 +76,14 @@ void Timer::ResetDIV()
 }
 
 
-void Timer::Deserialize(std::ifstream& ifs)
+void Timer::State(Serialization::BaseFunctor& functor)
 {
-	ifs.read((char*)&DIV, sizeof(DIV));
-	ifs.read((char*)&prev_TIMA_AND_result, sizeof(bool));
-	ifs.read((char*)&prev_DIV_AND_result, sizeof(bool));
-	ifs.read((char*)&TIMA_enabled, sizeof(bool));
-	ifs.read((char*)&DIV_enabled, sizeof(bool));
-	ifs.read((char*)&awaiting_interrupt_request, sizeof(bool));
-	ifs.read((char*)&t_cycles_until_interrupt_request, sizeof(unsigned));
-	ifs.read((char*)&AND_bit_pos_index, sizeof(unsigned));
-}
-
-
-void Timer::Serialize(std::ofstream& ofs)
-{
-	ofs.write((char*)&DIV, sizeof(DIV));
-	ofs.write((char*)&prev_TIMA_AND_result, sizeof(bool));
-	ofs.write((char*)&prev_DIV_AND_result, sizeof(bool));
-	ofs.write((char*)&TIMA_enabled, sizeof(bool));
-	ofs.write((char*)&DIV_enabled, sizeof(bool));
-	ofs.write((char*)&awaiting_interrupt_request, sizeof(bool));
-	ofs.write((char*)&t_cycles_until_interrupt_request, sizeof(unsigned));
-	ofs.write((char*)&AND_bit_pos_index, sizeof(unsigned));
+	functor.fun(&DIV, sizeof(u16));
+	functor.fun(&prev_TIMA_AND_result, sizeof(bool));
+	functor.fun(&prev_DIV_AND_result, sizeof(bool));
+	functor.fun(&TIMA_enabled, sizeof(bool));
+	functor.fun(&DIV_enabled, sizeof(bool));
+	functor.fun(&awaiting_interrupt_request, sizeof(bool));
+	functor.fun(&t_cycles_until_interrupt_request, sizeof(unsigned));
+	functor.fun(&AND_bit_pos_index, sizeof(unsigned));
 }

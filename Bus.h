@@ -1,5 +1,7 @@
 #pragma once
-#include "Serializable.h"
+
+#include "Component.h"
+#include "Serialization.h"
 #include "System.h"
 #include "Types.h"
 

@@ -5,7 +5,7 @@
 #include "System.h"
 #include "Utils.h"
 
-class Timer final : public Serializable
+class Timer final : public Component
 {
 public: 
 	APU* apu;
@@ -22,8 +22,7 @@ public:
 	bool TIMA_enabled = true;
 	bool DIV_enabled = true;
 
-	void Serialize(std::ofstream& ofs) override;
-	void Deserialize(std::ifstream& ifs) override;
+	void State(Serialization::BaseFunctor& functor) override;
 
 	void Update();
 	void Initialize();

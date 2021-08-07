@@ -10,7 +10,7 @@
 #include "Types.h"
 #include "Utils.h"
 
-class Cartridge final : public Serializable
+class Cartridge final : public Component
 {
 public:
 	u8   Read(u16 addr);
@@ -22,8 +22,7 @@ public:
 	// helper function for debugging
 	u16 GetCurrentRomBank();
 
-	void Serialize(std::ofstream& ofs) override;
-	void Deserialize(std::ifstream& ifs) override;
+	void State(Serialization::BaseFunctor& functor) override;
 
 private:
 	enum class MBC { None, MBC1, MBC2, MBC3, MBC5 } mbc;

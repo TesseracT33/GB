@@ -14,20 +14,18 @@
 #include "Configurable.h"
 #include "Observer.h"
 
-class Emulator final : public Serializable, public Configurable
+class Emulator final : public Snapshottable, public Configurable
 {
 public:
 	Emulator();
 	~Emulator();
 
-	void Serialize(std::ofstream& ofs) override;
-	void Deserialize(std::ifstream& ifs) override;
-	void SaveConfig(std::ofstream& ofs) override;
-	void LoadConfig(std::ifstream& ifs) override;
+	void State(Serialization::BaseFunctor& functor) override;
+	void Configure(Serialization::BaseFunctor& functor) override;
 	void SetDefaultConfig() override;
 
 	void ConnectSystemComponents();
-	void SetupSerializableComponents();
+	void BuildComponentVector();
 	void StartGame(wxString rom_path);
 	void MainLoop();
 	void Pause();
@@ -84,5 +82,5 @@ private:
 	std::string save_state_path = wxFileName(wxStandardPaths::Get().GetExecutablePath())
 		.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR) + "state.bin";
 
-	std::vector<Serializable*> serializable_components{};
+	std::vector<Snapshottable*> snapshottable_components{};
 };

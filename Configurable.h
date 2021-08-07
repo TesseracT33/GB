@@ -2,11 +2,12 @@
 
 #include <fstream>
 
+#include "Serialization.h"
+
 class Configurable
 {
 public:
-	virtual void LoadConfig(std::ifstream& ifs) = 0;
-	virtual void SaveConfig(std::ofstream& ofs) = 0;
+	virtual void Configure(Serialization::BaseFunctor& functor) = 0;
 	virtual void SetDefaultConfig() = 0;
 };
 

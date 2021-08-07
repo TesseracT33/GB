@@ -428,7 +428,7 @@ u8 BusImpl::Read(u16 addr, bool ppu_access, bool apu_access)
 	}
 
 	// D0000-DFFF - WRAM bank 1-7 (switchable in GBC mode only; in DMG mode always 1)
-	else if (addr >= 0xD000 && addr <= 0xDFFF)
+	else if (addr <= 0xDFFF)
 	{
 		return memory.wram[addr - 0xD000 + current_WRAM_bank * 0x1000];
 	}
@@ -697,19 +697,10 @@ u16 BusImpl::GetCurrentRomBank()
 }
 
 
-void BusImpl::Deserialize(std::ifstream& ifs)
+void BusImpl::State(Serialization::BaseFunctor& functor)
 {
-	ifs.read((char*)&boot_rom_mapped, sizeof(bool));
-	ifs.read((char*)&memory, sizeof(Memory));
-	ifs.read((char*)&current_VRAM_bank, sizeof(u8));
-	ifs.read((char*)&current_WRAM_bank, sizeof(u8));
-}
-
-
-void BusImpl::Serialize(std::ofstream& ofs)
-{
-	ofs.write((char*)&boot_rom_mapped, sizeof(bool));
-	ofs.write((char*)&memory, sizeof(Memory));
-	ofs.write((char*)&current_VRAM_bank, sizeof(u8));
-	ofs.write((char*)&current_WRAM_bank, sizeof(u8));
+	functor.fun(&boot_rom_mapped, sizeof(bool));
+	functor.fun(&memory, sizeof(Memory));
+	functor.fun(&current_VRAM_bank, sizeof(u8));
+	functor.fun(&current_WRAM_bank, sizeof(u8));
 }

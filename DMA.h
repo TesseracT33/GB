@@ -4,7 +4,7 @@
 #include "CPU.h"
 #include "Utils.h"
 
-class DMA final : public Serializable
+class DMA final : public Component
 {
 public:
 	Bus* bus;
@@ -45,6 +45,5 @@ public:
 	int GDMA_corrupted_bytes_written = 0;
 	u8 GDMA_current_block_copy_byte_index = 0;
 
-	void Serialize(std::ofstream& ofs) override;
-	void Deserialize(std::ifstream& ifs) override;
+	void State(Serialization::BaseFunctor& functor) override;
 };

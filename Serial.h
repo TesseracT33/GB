@@ -3,7 +3,7 @@
 #include "Bus.h"
 #include "CPU.h"
 
-class Serial : public Serializable 
+class Serial : public Component 
 {
 public:
 	Bus* bus;
@@ -14,8 +14,7 @@ public:
 	void TriggerTransfer();
 	void Update();
 
-	void Serialize(std::ofstream& ofs) override;
-	void Deserialize(std::ifstream& ifs) override;
+	void State(Serialization::BaseFunctor& functor) override;
 
 private:
 	const u8 incoming_byte = 0xFF;

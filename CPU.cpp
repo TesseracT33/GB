@@ -72,77 +72,6 @@ void CPU::ExitSpeedSwitch()
 }
 
 
-void CPU::Serialize(std::ofstream& ofs)
-{
-	ofs.write((char*)&HALT, sizeof(bool));
-	ofs.write((char*)&HDMA_transfer_active, sizeof(bool));
-	ofs.write((char*)&speed_switch_active, sizeof(bool));
-	ofs.write((char*)&STOP, sizeof(bool));
-
-	ofs.write((char*)&A, sizeof(u8));
-	ofs.write((char*)&B, sizeof(u8));
-	ofs.write((char*)&C, sizeof(u8));
-	ofs.write((char*)&D, sizeof(u8));
-	ofs.write((char*)&E, sizeof(u8));
-	ofs.write((char*)&H, sizeof(u8));
-	ofs.write((char*)&L, sizeof(u8));
-
-	ofs.write((char*)&F_Z, sizeof(bool));
-	ofs.write((char*)&F_N, sizeof(bool));
-	ofs.write((char*)&F_H, sizeof(bool));
-	ofs.write((char*)&F_C, sizeof(bool));
-
-	ofs.write((char*)&SP, sizeof(u16));
-	ofs.write((char*)&PC, sizeof(u16));
-
-	ofs.write((char*)&action_taken, sizeof(bool));
-	ofs.write((char*)&EI_called, sizeof(bool));
-	ofs.write((char*)&HALT_bug, sizeof(bool));
-	ofs.write((char*)&IME, sizeof(bool));
-	ofs.write((char*)&interrupt_dispatched_on_last_update, sizeof(bool));
-
-	ofs.write((char*)&m_cycles_instr, sizeof(unsigned));
-	ofs.write((char*)&m_cycles_until_next_instr, sizeof(unsigned));
-	ofs.write((char*)&speed_switch_m_cycles_remaining, sizeof(unsigned));
-	ofs.write((char*)&instr_until_set_IME, sizeof(unsigned));
-}
-
-void CPU::Deserialize(std::ifstream& ifs)
-{
-	ifs.read((char*)&HALT, sizeof(bool));
-	ifs.read((char*)&HDMA_transfer_active, sizeof(bool));
-	ifs.read((char*)&speed_switch_active, sizeof(bool));
-	ifs.read((char*)&STOP, sizeof(bool));
-
-	ifs.read((char*)&A, sizeof(u8));
-	ifs.read((char*)&B, sizeof(u8));
-	ifs.read((char*)&C, sizeof(u8));
-	ifs.read((char*)&D, sizeof(u8));
-	ifs.read((char*)&E, sizeof(u8));
-	ifs.read((char*)&H, sizeof(u8));
-	ifs.read((char*)&L, sizeof(u8));
-
-	ifs.read((char*)&F_Z, sizeof(bool));
-	ifs.read((char*)&F_N, sizeof(bool));
-	ifs.read((char*)&F_H, sizeof(bool));
-	ifs.read((char*)&F_C, sizeof(bool));
-
-	ifs.read((char*)&SP, sizeof(u16));
-	ifs.read((char*)&PC, sizeof(u16));
-
-	ifs.read((char*)&action_taken, sizeof(bool));
-	ifs.read((char*)&EI_called, sizeof(bool));
-	ifs.read((char*)&HALT_bug, sizeof(bool));
-	ifs.read((char*)&IME, sizeof(bool));
-	ifs.read((char*)&interrupt_dispatched_on_last_update, sizeof(bool));
-
-	ifs.read((char*)&m_cycles_instr, sizeof(unsigned));
-	ifs.read((char*)&m_cycles_until_next_instr, sizeof(unsigned));
-	ifs.read((char*)&speed_switch_m_cycles_remaining, sizeof(unsigned));
-	ifs.read((char*)&instr_until_set_IME, sizeof(unsigned));
-}
-
-
 void CPU::ExecuteInstruction(u8 opcode)
 {
 	switch (opcode)
@@ -1739,4 +1668,40 @@ void CPU::DAA()
 void CPU::IllegalOpcode(u8 opcode)
 {
 	wxMessageBox(wxString::Format("Illegal opcode 0x%02X encountered.", opcode));
+}
+
+
+void CPU::State(Serialization::BaseFunctor& functor)
+{
+	functor.fun(&HALT, sizeof(bool));
+	functor.fun(&HDMA_transfer_active, sizeof(bool));
+	functor.fun(&speed_switch_active, sizeof(bool));
+	functor.fun(&STOP, sizeof(bool));
+
+	functor.fun(&A, sizeof(u8));
+	functor.fun(&B, sizeof(u8));
+	functor.fun(&C, sizeof(u8));
+	functor.fun(&D, sizeof(u8));
+	functor.fun(&E, sizeof(u8));
+	functor.fun(&H, sizeof(u8));
+	functor.fun(&L, sizeof(u8));
+
+	functor.fun(&F_Z, sizeof(bool));
+	functor.fun(&F_N, sizeof(bool));
+	functor.fun(&F_H, sizeof(bool));
+	functor.fun(&F_C, sizeof(bool));
+
+	functor.fun(&SP, sizeof(u16));
+	functor.fun(&PC, sizeof(u16));
+
+	functor.fun(&action_taken, sizeof(bool));
+	functor.fun(&EI_called, sizeof(bool));
+	functor.fun(&HALT_bug, sizeof(bool));
+	functor.fun(&IME, sizeof(bool));
+	functor.fun(&interrupt_dispatched_on_last_update, sizeof(bool));
+
+	functor.fun(&m_cycles_instr, sizeof(unsigned));
+	functor.fun(&m_cycles_until_next_instr, sizeof(unsigned));
+	functor.fun(&speed_switch_m_cycles_remaining, sizeof(unsigned));
+	functor.fun(&instr_until_set_IME, sizeof(unsigned));
 }

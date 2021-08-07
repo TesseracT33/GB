@@ -428,7 +428,7 @@ bool Cartridge::DetectRAMSize()
 bool Cartridge::DetectGBCFunctions()
 {
 	u8 code = cartridge[Bus::Addr::GBC_FLAG];
-	//return false;
+	return false;
 	return code == 0xC0 || code == 0x80;
 }
 
@@ -478,44 +478,26 @@ void Cartridge::ReadCartridgeRAMFromDisk()
 }
 
 
-void Cartridge::Deserialize(std::ifstream& ifs)
-{
-	// todo: redo; new variables
-	ifs.read((char*)cartridge, sizeof(u8) * size_cartridge);
-	ifs.read((char*)RAM_banks, sizeof(u8) * size_RAM_banks);
-	ifs.read((char*)MBC2_RAM, sizeof(u8) * size_MBC2_RAM);
-	ifs.read((char*)RTC_memory, sizeof(u8) * 5);
-
-	ifs.read((char*)&ROM_RAM_mode_select, sizeof(bool));
-	ifs.read((char*)&RAM_enabled, sizeof(bool));
-	ifs.read((char*)&current_RAM_bank, sizeof(u8));
-	ifs.read((char*)&current_ROM_bank, sizeof(u16));
-	ifs.read((char*)&RAM_RTC_mode_select, sizeof(bool));
-	ifs.read((char*)&RTC_enabled, sizeof(bool));
-	ifs.read((char*)&RTC_0_written, sizeof(bool));
-	ifs.read((char*)&RTC_register_select, sizeof(u8));
-}
-
-
-void Cartridge::Serialize(std::ofstream& ofs)
-{
-	ofs.write((char*)cartridge, sizeof(u8) * size_cartridge);
-	ofs.write((char*)RAM_banks, sizeof(u8) * size_RAM_banks);
-	ofs.write((char*)MBC2_RAM, sizeof(u8) * size_MBC2_RAM);
-	ofs.write((char*)RTC_memory, sizeof(u8) * 5);
-
-	ofs.write((char*)&ROM_RAM_mode_select, sizeof(bool));
-	ofs.write((char*)&RAM_enabled, sizeof(bool));
-	ofs.write((char*)&current_RAM_bank, sizeof(u8));
-	ofs.write((char*)&current_ROM_bank, sizeof(u16));
-	ofs.write((char*)&RAM_RTC_mode_select, sizeof(bool));
-	ofs.write((char*)&RTC_enabled, sizeof(bool));
-	ofs.write((char*)&RTC_0_written, sizeof(bool));
-	ofs.write((char*)&RTC_register_select, sizeof(u8));
-}
-
-
 u16 Cartridge::GetCurrentRomBank()
 {
 	return current_ROM_bank;
+}
+
+
+void Cartridge::State(Serialization::BaseFunctor& functor)
+{
+	// todo: redo; new variables
+	functor.fun(cartridge, sizeof(u8) * size_cartridge);
+	functor.fun(RAM_banks, sizeof(u8) * size_RAM_banks);
+	functor.fun(MBC2_RAM, sizeof(u8) * size_MBC2_RAM);
+	functor.fun(RTC_memory, sizeof(u8) * 5);
+
+	functor.fun(&ROM_RAM_mode_select, sizeof(bool));
+	functor.fun(&RAM_enabled, sizeof(bool));
+	functor.fun(&current_RAM_bank, sizeof(u8));
+	functor.fun(&current_ROM_bank, sizeof(u16));
+	functor.fun(&RAM_RTC_mode_select, sizeof(bool));
+	functor.fun(&RTC_enabled, sizeof(bool));
+	functor.fun(&RTC_0_written, sizeof(bool));
+	functor.fun(&RTC_register_select, sizeof(u8));
 }

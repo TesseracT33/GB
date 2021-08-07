@@ -14,7 +14,7 @@
 #include "Themes.h"
 #include "Utils.h"
 
-class PPU final : public Serializable, public Configurable
+class PPU final : public Component
 {
 public:
 	~PPU();
@@ -23,10 +23,8 @@ public:
 	CPU* cpu;
 	DMA* dma;
 
-	void Serialize(std::ofstream& ofs) override;
-	void Deserialize(std::ifstream& ifs) override;
-	void SaveConfig(std::ofstream& ofs) override;
-	void LoadConfig(std::ifstream& ifs) override;
+	void State(Serialization::BaseFunctor& functor) override;
+	void Configure(Serialization::BaseFunctor& functor) override;
 	void SetDefaultConfig() override;
 
 	void CheckSTATInterrupt();
@@ -76,6 +74,7 @@ private:
 
 		static const size_t size = sizeof(u8) * 3 + sizeof(bool);
 
+		Pixel() = default;
 		// use: BG pixels on DMG
 		Pixel(u8 col_id) { this->col_id = col_id; }
 		// use: BG pixels on CGB
@@ -192,27 +191,17 @@ private:
 	static const unsigned resolution_x = 160;
 	static const unsigned resolution_y = 144;
 	static const unsigned colour_channels = 3;
-	static const int framebuffer_arr_size = resolution_x * resolution_y * colour_channels;
-	const unsigned default_scale = 6;
-	const unsigned t_cycles_per_scanline = 456;
+	static const unsigned framebuffer_arr_size = resolution_x * resolution_y * colour_channels;
 
-	bool CheckIfReachedWindow();
-	void ClearFIFOs();
-	void EnterVBlank();
-	void EnterHBlank();
-	void PrepareForNewFrame();
-	void PrepareForNewScanline();
-	void SetScreenMode(PPU::LCDStatus mode);
-	void FetchBackgroundTile();
-	void FetchSprite();
-	void ResetGraphics();
-	void PushPixel(SDL_Color& col);
-	void Search_OAM_for_Sprites();
-	void SetDisplayScale(unsigned scale);
-	void ShiftPixel();
-	void TryToInitiateSpriteFetch();
-	void UpdatePixelFetchers();
-	SDL_Color GetColourFromPixel(Pixel& pixel, TileType object_type) const;
+	const unsigned t_cycles_per_scanline = 456;
+	const SDL_Color color_white = Themes::grayscale[0];
+	const SDL_Color color_light_grey = Themes::grayscale[1];
+	const SDL_Color color_dark_grey = Themes::grayscale[2];
+	const SDL_Color color_black = Themes::grayscale[3];
+
+	// config-related
+	const unsigned default_scale = 6;
+	const SDL_Color default_palette[4] = { color_white, color_light_grey, color_dark_grey, color_black };
 
 	u8* LCDC;
 	u8* LY;
@@ -253,12 +242,6 @@ private:
 	unsigned framebuffer_pos = 0;
 	unsigned OAM_check_interval = 0;
 
-
-	const SDL_Color color_white = Themes::grayscale[0];
-	const SDL_Color color_light_grey = Themes::grayscale[1];
-	const SDL_Color color_dark_grey = Themes::grayscale[2];
-	const SDL_Color color_black = Themes::grayscale[3];
-	const SDL_Color default_palette[4] = { color_white, color_light_grey, color_dark_grey, color_black };
 	SDL_Color GB_palette[4] = { color_white, color_light_grey, color_dark_grey, color_black };
 
 	std::vector<Sprite> sprite_buffer;
@@ -268,6 +251,24 @@ private:
 	SDL_Renderer* renderer = nullptr;
 	SDL_Window* window = nullptr;
 	SDL_Rect rect;
+
+	bool CheckIfReachedWindow();
+	void ClearFIFOs();
+	void EnterVBlank();
+	void EnterHBlank();
+	void PrepareForNewFrame();
+	void PrepareForNewScanline();
+	void SetScreenMode(PPU::LCDStatus mode);
+	void FetchBackgroundTile();
+	void FetchSprite();
+	void ResetGraphics();
+	void PushPixel(SDL_Color& col);
+	void Search_OAM_for_Sprites();
+	void SetDisplayScale(unsigned scale);
+	void ShiftPixel();
+	void TryToInitiateSpriteFetch();
+	void UpdatePixelFetchers();
+	SDL_Color GetColourFromPixel(Pixel& pixel, TileType object_type) const;
 
 	/// GBC-specific
 

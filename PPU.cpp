@@ -560,12 +560,14 @@ void PPU::ShiftPixel()
 		// todo: emulate this better? Currently, a black pixel is pushed only if the speed switch is active during the same t-cycle as the ppu shifts pixels
 		if (!can_access_VRAM)
 			col = color_black;
-		else if (System::mode == System::Mode::CGB && BG_master_priority || !BG_enabled && System::mode != System::Mode::CGB)
-			col = GetColourFromPixel(sprite_pixel, TileType::OBJ);
-		else if (!sprites_enabled || sprite_pixel.col_id == 0 || sprite_pixel.bg_priority && bg_pixel.col_id != 0)
-			col = GetColourFromPixel(bg_pixel, TileType::BG);
 		else
-			col = GetColourFromPixel(sprite_pixel, TileType::OBJ);
+		{
+			bool req_for_bg = (System::mode == System::Mode::DMG ? BG_enabled : BG_master_priority);
+			if (sprite_pixel.col_id == 0 || (req_for_bg && sprite_pixel.bg_priority && (!sprites_enabled || bg_pixel.col_id != 0)))
+				col = GetColourFromPixel(bg_pixel, TileType::BG);
+			else
+				col = GetColourFromPixel(sprite_pixel, TileType::OBJ);
+		}
 
 		sprite_FIFO.pop();
 	}
@@ -589,8 +591,6 @@ void PPU::PushPixel(SDL_Color& col)
 	// If it has, the background fetcher state is fully reset to step 1
 	if (!bg_tile_fetcher.window_reached)
 		CheckIfReachedWindow();
-
-	//TryToInitiateSpriteFetch();
 }
 
 
@@ -719,28 +719,6 @@ void PPU::SetColour(int id, SDL_Color color)
 }
 
 
-void PPU::LoadConfig(std::ifstream& ifs)
-{
-	ifs.read((char*)&scale, sizeof(unsigned));
-	ifs.read((char*)&GB_palette, sizeof(SDL_Color) * 4);
-}
-
-
-void PPU::SaveConfig(std::ofstream& ofs)
-{
-	ofs.write((char*)&scale, sizeof(unsigned));
-	ofs.write((char*)&GB_palette, sizeof(SDL_Color) * 4);
-}
-
-
-void PPU::SetDefaultConfig()
-{
-	scale = default_scale;
-	for (int i = 0; i < 4; i++)
-		GB_palette[i] = default_palette[i];
-}
-
-
 void PPU::Set_CGB_Colour(u8 index, u8 data, bool BGP)
 {
 	u16 colour;
@@ -811,37 +789,74 @@ void PPU::SetWindowSize(unsigned width, unsigned height)
 }
 
 
-void PPU::Serialize(std::ofstream& ofs)
+void PPU::State(Serialization::BaseFunctor& functor)
 {
-	// todo
-	size_t num_sprites = sprite_buffer.size();
-	ofs.write((char*)&num_sprites, sizeof(size_t));
-	for (size_t i = 0; i < num_sprites; i++)
-	{
-		Sprite& sprite = sprite_buffer[i];
-		ofs.write((char*)&sprite, sizeof(Sprite));
-	}
+	Serialization::STD_vector(functor, sprite_buffer);
+	Serialization::STD_queue(functor, background_FIFO);
+	Serialization::STD_queue(functor, sprite_FIFO);
+
+	functor.fun(&bg_tile_fetcher, sizeof(BackgroundTileFetcher));
+	functor.fun(&sprite_tile_fetcher, sizeof(SpriteTileFetcher));
+	functor.fun(&pixel_shifter, sizeof(PixelShifter));
+
+	functor.fun(&LCD_enabled, sizeof(bool));
+	functor.fun(&WY_equals_LY_in_current_frame, sizeof(bool));
+	functor.fun(&scale, sizeof(unsigned));
+
+	functor.fun(&obj_priority_mode, sizeof(OBJ_Priority_Mode));
+	functor.fun(&can_access_VRAM, sizeof(bool));
+	functor.fun(&can_access_OAM, sizeof(bool));
+
+	// LDCD flags
+	functor.fun(&BG_enabled, sizeof(bool));
+	functor.fun(&BG_master_priority, sizeof(bool));
+	functor.fun(&sprites_enabled, sizeof(bool));
+	functor.fun(&window_display_enabled, sizeof(bool));
+	functor.fun(&sprite_height, sizeof(u8));
+	functor.fun(&addr_BG_tile_map, sizeof(u16));
+	functor.fun(&addr_tile_data, sizeof(u16));
+	functor.fun(&addr_window_tile_map, sizeof(u16));
+
+	functor.fun(&reset_graphics_after_render, sizeof(bool));
+	functor.fun(&STAT_cond_met_LY_LYC, sizeof(bool));
+	functor.fun(&STAT_cond_met_LCD_mode, sizeof(bool));
+	functor.fun(&tile_data_signed, sizeof(bool));
+
+	functor.fun(framebuffer, std::size(framebuffer) * sizeof(u8));
+
+	functor.fun(&OAM_sprite_addr, sizeof(u16));
+
+	functor.fun(&t_cycle_counter, sizeof(unsigned));
+	functor.fun(&pixel_offset_x, sizeof(unsigned));
+	functor.fun(&pixel_offset_y, sizeof(unsigned));
+	functor.fun(&scale_temp, sizeof(unsigned));
+	functor.fun(&pixel_offset_x_temp, sizeof(unsigned));
+	functor.fun(&pixel_offset_y_temp, sizeof(unsigned));
+	functor.fun(&framebuffer_pos, sizeof(unsigned));
+	functor.fun(&OAM_check_interval, sizeof(unsigned));
+
+	functor.fun(GB_palette, std::size(GB_palette) * sizeof(SDL_Color));
+
+	functor.fun(&rect, sizeof(SDL_Rect));
+
+	functor.fun(BGP_reg, std::size(BGP_reg) * sizeof(u8));
+	functor.fun(OBP_reg, std::size(OBP_reg) * sizeof(u8));
+
+	functor.fun(BGP_GBC, std::size(BGP_GBC) * sizeof(SDL_Color));
+	functor.fun(OBP_GBC, std::size(OBP_GBC) * sizeof(SDL_Color));
 }
 
 
-void PPU::Deserialize(std::ifstream& ifs)
+void PPU::Configure(Serialization::BaseFunctor& functor)
 {
-	// todo
-	ifs.read((char*)&LCD_enabled, sizeof(bool));
-	ifs.read((char*)&WY_equals_LY_in_current_frame, sizeof(bool));
-	ifs.read((char*)&can_access_VRAM, sizeof(bool));
-	ifs.read((char*)&can_access_OAM, sizeof(bool));
+	functor.fun(&scale, sizeof(unsigned));
+	functor.fun(GB_palette, std::size(GB_palette) * sizeof(SDL_Color));
+}
 
-	ifs.read((char*)&bg_tile_fetcher.paused, sizeof(bool));
 
-	ifs.read((char*)framebuffer, sizeof(u8) * framebuffer_arr_size);
-
-	size_t num_sprites;
-	ifs.read((char*)&num_sprites, sizeof(size_t));
-	for (size_t i = 0; i < num_sprites; i++)
-	{
-		Sprite sprite;
-		ifs.read((char*)&sprite, sizeof(Sprite));
-		sprite_buffer.push_back(sprite);
-	}
+void PPU::SetDefaultConfig()
+{
+	scale = default_scale;
+	for (int i = 0; i < 4; i++)
+		GB_palette[i] = default_palette[i];
 }

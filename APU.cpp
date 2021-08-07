@@ -678,13 +678,19 @@ void APU::Sample()
 }
 
 
-void APU::Deserialize(std::ifstream& ifs)
+void APU::State(Serialization::BaseFunctor& functor)
 {
 
 }
 
 
-void APU::Serialize(std::ofstream& ofs)
+void APU::Configure(Serialization::BaseFunctor& functor)
+{
+
+}
+
+
+void APU::SetDefaultConfig()
 {
 
 }
