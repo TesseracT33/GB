@@ -47,7 +47,7 @@ public:
 		else
 		{
 			// deserialization
-			size_t size;
+			size_t size = 0;
 			functor.fun(&size, sizeof(size_t));
 			char* c_str = new char[size + 1]{};
 			functor.fun(c_str, size * sizeof(char));
@@ -73,9 +73,10 @@ public:
 			// deserialization
 			vector.clear();
 
-			size_t size;
+			size_t size = 0;
 			functor.fun(&size, sizeof(size_t));
-			vector.resize(size);
+			if (size > 0)
+				vector.resize(size);
 			for (size_t i = 0; i < size; i++)
 			{
 				T t;
@@ -107,7 +108,7 @@ public:
 			while (!queue.empty())
 				queue.pop();
 
-			size_t size;
+			size_t size = 0;
 			functor.fun(&size, sizeof(size_t));
 			for (size_t i = 0; i < size; i++)
 			{
