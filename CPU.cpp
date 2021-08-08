@@ -4,7 +4,7 @@
 
 using namespace Util;
 
-#define  F (F_Z << 7 | F_N << 6 | F_H << 5 | F_C << 4 | 0xF)
+#define  F (F_Z << 7 | F_N << 6 | F_H << 5 | F_C << 4)
 #define AF (A << 8 | F)
 #define BC (B << 8 | C)
 #define DE (D << 8 | E)
@@ -156,7 +156,7 @@ void CPU::ExecuteInstruction(u8 opcode)
 		break;
 
 	case 0x10: // STOP
-		EnterSTOP();
+		Stop();
 		break;
 
 	case 0x11: // LD DE, d16
@@ -591,7 +591,7 @@ void CPU::ExecuteInstruction(u8 opcode)
 		break;
 
 	case 0x76: // HALT
-		EnterHALT();
+		Halt();
 		break;
 
 	case 0x77: // LD  (HL), A
@@ -1586,7 +1586,7 @@ unsigned CPU::CheckInterrupts()
 }
 
 
-void CPU::EnterHALT()
+void CPU::Halt()
 {
 	if (IME || (*IF & *IE & 0x1F) == 0)
 	{
@@ -1600,7 +1600,7 @@ void CPU::EnterHALT()
 }
 
 
-void CPU::EnterSTOP()
+void CPU::Stop()
 {
 	// on DMG, enter low power mode. On the CGB, switch between normal and double speed (if KEY1.0 has been set)
 	if (System::mode == System::Mode::CGB)

@@ -174,6 +174,6 @@ private:
 
 	void IllegalOpcode(u8 opcode);
 
-	void EnterSTOP();
-	void EnterHALT();
+	void Stop();
+	void Halt();
 };
