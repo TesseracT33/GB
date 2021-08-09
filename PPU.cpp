@@ -532,14 +532,6 @@ void PPU::ShiftPixel()
 {
 	if (background_FIFO.empty()) return;
 
-	// SCX % 8 background pixels are discarded at the start of each scanline rather than being pushed to the LCD
-	if (bg_tile_fetcher.leftmost_pixels_to_ignore > 0)
-	{
-		background_FIFO.pop();
-		bg_tile_fetcher.leftmost_pixels_to_ignore--;
-		return;
-	}
-
 	SDL_Color col;
 
 	Pixel& bg_pixel = background_FIFO.front();
@@ -572,6 +564,13 @@ void PPU::ShiftPixel()
 		sprite_FIFO.pop();
 	}
 	background_FIFO.pop();
+
+	// SCX % 8 pixels are discarded at the start of each scanline rather than being pushed to the LCD
+	if (leftmost_pixels_to_ignore > 0)
+	{
+		leftmost_pixels_to_ignore--;
+		return;
+	}
 
 	PushPixel(col);
 }
@@ -700,7 +699,7 @@ void PPU::PrepareForNewScanline()
 	OAM_sprite_addr = static_cast<u16>(Bus::Addr::OAM_START);
 
 	// SCX % 8 pixels are discarded at the start of each scanline rather than being pushed to the LCD
-	bg_tile_fetcher.leftmost_pixels_to_ignore = *SCX % 8;
+	leftmost_pixels_to_ignore = *SCX % 8;
 }
 
 
@@ -822,6 +821,7 @@ void PPU::State(Serialization::BaseFunctor& functor)
 	functor.fun(&STAT_cond_met_LCD_mode, sizeof(bool));
 	functor.fun(&tile_data_signed, sizeof(bool));
 
+	functor.fun(&leftmost_pixels_to_ignore, sizeof(u8));
 	functor.fun(framebuffer, std::size(framebuffer) * sizeof(u8));
 
 	functor.fun(&OAM_sprite_addr, sizeof(u16));

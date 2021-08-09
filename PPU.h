@@ -139,7 +139,6 @@ private:
 
 		bool window_reached = false;
 		bool step3_completed_on_current_scanline = false;
-		u8 leftmost_pixels_to_ignore = 0; // section: SCX at a sub-tile-layer
 		int window_line_counter = -1; // set to 0 when window_reached is set to true during a scanline for the first time in a frame
 
 		void StartOver()
@@ -229,6 +228,7 @@ private:
 	bool STAT_cond_met_LCD_mode = false;
 	bool tile_data_signed = false;
 	
+	u8 leftmost_pixels_to_ignore;
 	u8 framebuffer[framebuffer_arr_size]{};
 
 	u16 OAM_sprite_addr = Bus::Addr::OAM_START;
