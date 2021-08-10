@@ -113,13 +113,13 @@ private:
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // xF
 	};
 
-	inline unsigned opcode_m_cycle_len_CB(u8 opcode) // todo: double check CB opcode lengths
+	inline unsigned opcode_m_cycle_len_CB(u8 opcode)
 	{
 		// all CB opcodes of the form x6 or xE take 4 m-cycles, all others take 2 m-cycles,
 		// except if x=4,5,6,7, those take 3 m-cycles
 		// source: blargg instr_timing test
 		if ((opcode & 0xF) == 0x6 || (opcode & 0xF) == 0xE)
-			return ((opcode & 0xF0) >= 0x40 && (opcode & 0xF0) <= 0x70) ? 3 : 4;
+			return (opcode >> 4 < 4 || opcode >> 4 > 7) ? 4 : 3;
 		return 2;
 	};
 
