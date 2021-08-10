@@ -28,7 +28,7 @@ The Nintendo Game Boy is a handheld video game system initially released in 1989
 
 # Tests
 The emulator passes the following tests:
-- Blargg -- cpu_instr, instr_timing
+- Blargg -- cpu_instr, instr_timing, halt_bug
 - mattcurrie -- dmg-acid2
 - mooneye -- all MBC1, MBC2 and MBC5 tests, except for mbc1/multicart_rom_8Mb
 
