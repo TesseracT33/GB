@@ -24,10 +24,11 @@ The Nintendo Game Boy is a handheld video game system initially released in 1989
 
 # Future features (hopefully)
 - Game Boy Colour support (already underway).
+- Refactor the CPU implementation to make it sub-instruction accurate.
 
 # Tests
 The emulator passes the following tests:
-- Blargg -- cpu_instr
+- Blargg -- cpu_instr, instr_timing
 - mattcurrie -- dmg-acid2
 - mooneye -- all MBC1, MBC2 and MBC5 tests, except for mbc1/multicart_rom_8Mb
 
