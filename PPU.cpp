@@ -219,14 +219,13 @@ void PPU::CheckSTATInterrupt()
 	bool STAT_ENABLE_OAM = CheckBit(STAT, 5);
 	bool prev_STAT_cond_met_LCD_mode = STAT_cond_met_LCD_mode;
 	STAT_cond_met_LCD_mode = LCD_mode == 0 && STAT_ENABLE_HBL ||
-		LCD_mode == 1 && STAT_ENABLE_VBL || LCD_mode == 2 && STAT_ENABLE_OAM;
+		LCD_mode == 1 && (STAT_ENABLE_VBL || STAT_ENABLE_OAM) || LCD_mode == 2 && STAT_ENABLE_OAM;
 
 	if (!prev_STAT_cond_met_LY_LYC && !prev_STAT_cond_met_LCD_mode &&
 		(STAT_cond_met_LY_LYC || STAT_cond_met_LCD_mode))
 	{
 		cpu->RequestInterrupt(CPU::Interrupt::STAT);
 	}
-	// todo: unsure if interrupt should trigger for LCDMode == 1 && STAT_ENABLE_OAM
 }
 
 
