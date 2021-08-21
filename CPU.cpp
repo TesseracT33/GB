@@ -165,7 +165,7 @@ void CPU::LD_r8_r8() // LD r8, r8    len: 4t if the second r8 != (HL), else 8t
 
 
 // Load the value of r8 into the memory location pointed to by HL
-void CPU::LD_mHL_r8() // LD (HL), r8    len: 8t
+void CPU::LD_HL_r8() // LD (HL), r8    len: 8t
 {
 	u8 op = GetOpMod();
 	bus->WriteCycle(HL, op);
@@ -182,7 +182,7 @@ void CPU::LD_r8_u8() // LD r8, u8    len: 8t
 
 
 // Load u8 into (HL)
-void CPU::LD_mHL_u8() // LD (HL), u8    len: 12t
+void CPU::LD_HL_u8() // LD (HL), u8    len: 12t
 {
 	u8 op = Read_u8();
 	bus->WriteCycle(HL, op);
@@ -212,7 +212,7 @@ void CPU::LD_SP_HL() // LD SP, HL    len: 8t
 
 
 // Load A into the byte at address r16
-void CPU::LD_mr16_A() // LD (r16), A    len: 8t
+void CPU::LD_r16_A() // LD (r16), A    len: 8t
 {
 	if (opcode == 0x02)
 		bus->WriteCycle(BC, A);
@@ -222,7 +222,7 @@ void CPU::LD_mr16_A() // LD (r16), A    len: 8t
 
 
 // Load the byte at address r16 into A
-void CPU::LD_A_mr16() // LD A, (r16)    len: 8t
+void CPU::LD_A_r16() // LD A, (r16)    len: 8t
 {
 	if (opcode == 0x0A)
 		A = bus->ReadCycle(BC);

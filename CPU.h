@@ -61,7 +61,7 @@ private:
 
 	u8 opcode; // opcode of instruction currently being executed
 	bool HL_set; // used for some instructions to indicate that an operand is (HL), e.g. in INC (HL)
-	u8 read_HL; // similar to above; used for some instructions as the value of (HL)
+	u8 read_HL; // similar to above; used for some instructions as the value read at address (HL)
 
 	void CheckInterrupts();
 
@@ -71,6 +71,7 @@ private:
 
 	void WaitCycle(const unsigned cycles = 1) { bus->WaitCycle(cycles); };
 
+	// Used by instructions to determine various different operands, given the opcode
 	bool GetCond();
 	u8 GetOpMod();
 	u8 GetOpDiv(u8 offset);
@@ -79,13 +80,13 @@ private:
 
 	// load instructions
 	void LD_r8_r8();
-	void LD_mHL_r8();
+	void LD_HL_r8();
 	void LD_r8_u8();
-	void LD_mHL_u8();
+	void LD_HL_u8();
 	void LD_r16_u16();
 	void LD_SP_HL();
-	void LD_mr16_A();
-	void LD_A_mr16();
+	void LD_r16_A();
+	void LD_A_r16();
 	void LD_u16_A();
 	void LD_A_u16();
 	void LD_u16_SP();
@@ -168,7 +169,7 @@ private:
 	void SCF();
 	void STOP();
 
-	// helper
+	// helper functions
 	void PushPC();
 	void PopPC();
 
@@ -176,23 +177,23 @@ private:
 
 	const instr_t instr_table[0x100] =
 	{
-		&CPU::NOP      , &CPU::LD_r16_u16, &CPU::LD_mr16_A, &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::RLCA,
-		&CPU::LD_u16_SP, &CPU::ADD_HL    , &CPU::LD_A_mr16, &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::RRCA,
-		&CPU::STOP     , &CPU::LD_r16_u16, &CPU::LD_mr16_A, &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::RLA ,
-		&CPU::JR       , &CPU::ADD_HL    , &CPU::LD_A_mr16, &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::RRA ,
-		&CPU::JR       , &CPU::LD_r16_u16, &CPU::LD_HLp_A , &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::DAA ,
-		&CPU::JR       , &CPU::ADD_HL    , &CPU::LD_A_HLp , &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::CPL ,
-		&CPU::JR       , &CPU::LD_r16_u16, &CPU::LD_HLm_A , &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_mHL_u8, &CPU::SCF ,
-		&CPU::JR       , &CPU::ADD_HL    , &CPU::LD_A_HLm , &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::CCF ,
+		&CPU::NOP      , &CPU::LD_r16_u16, &CPU::LD_r16_A, &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8, &CPU::RLCA,
+		&CPU::LD_u16_SP, &CPU::ADD_HL    , &CPU::LD_A_r16, &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8, &CPU::RRCA,
+		&CPU::STOP     , &CPU::LD_r16_u16, &CPU::LD_r16_A, &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8, &CPU::RLA ,
+		&CPU::JR       , &CPU::ADD_HL    , &CPU::LD_A_r16, &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8, &CPU::RRA ,
+		&CPU::JR       , &CPU::LD_r16_u16, &CPU::LD_HLp_A, &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8, &CPU::DAA ,
+		&CPU::JR       , &CPU::ADD_HL    , &CPU::LD_A_HLp, &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8, &CPU::CPL ,
+		&CPU::JR       , &CPU::LD_r16_u16, &CPU::LD_HLm_A, &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_HL_u8, &CPU::SCF ,
+		&CPU::JR       , &CPU::ADD_HL    , &CPU::LD_A_HLm, &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8, &CPU::CCF ,
 
-		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
-		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
-		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
-		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
-		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
-		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
-		&CPU::LD_mHL_r8, &CPU::LD_mHL_r8, &CPU::LD_mHL_r8, &CPU::LD_mHL_r8, &CPU::LD_mHL_r8, &CPU::LD_mHL_r8, &CPU::HALT     , &CPU::LD_mHL_r8,
-		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
+		&CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8,
+		&CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8,
+		&CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8,
+		&CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8,
+		&CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8,
+		&CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8,
+		&CPU::LD_HL_r8, &CPU::LD_HL_r8, &CPU::LD_HL_r8, &CPU::LD_HL_r8, &CPU::LD_HL_r8, &CPU::LD_HL_r8, &CPU::HALT    , &CPU::LD_HL_r8,
+		&CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8, &CPU::LD_r8_r8,
 
 		&CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8,
 		&CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  ,
