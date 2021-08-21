@@ -73,7 +73,6 @@ private:
 	const unsigned microseconds_per_frame_DMG = double(m_cycles_per_frame_DMG) / double(m_cycles_per_sec_DMG) * 1E+6; // 16742
 	unsigned m_cycles_per_frame = m_cycles_per_frame_DMG; // note: this var is not affected by 'emulation_speed', only by 'speed_mode'
 	unsigned microseconds_per_frame = microseconds_per_frame_DMG; // not affected by 'speed_mode', only by 'emulation_speed'
-	unsigned m_cycle_counter = 0;
 
 	bool save_state_on_next_cycle = false;
 	bool load_state_on_next_cycle = false;

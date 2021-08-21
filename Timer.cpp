@@ -23,6 +23,7 @@ void Timer::Reset()
 
 void Timer::Update()
 {
+	// one iteration per t-cycle
 	for (int i = 0; i < 4; i++)
 	{
 		if (awaiting_interrupt_request && --t_cycles_until_interrupt_request == 0)

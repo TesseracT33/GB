@@ -103,6 +103,10 @@ public:
 	virtual u8*  ReadIOPointer(u16 addr) = 0;
 	virtual void Reset(bool execute_boot_rom) = 0;
 
+	virtual u8 ReadCycle(u16 addr) = 0;
+	virtual void WriteCycle(u16 addr, u8 data) = 0;
+	virtual void WaitCycle(const unsigned cycles = 1) = 0;
+
 	virtual void InitiateSpeedSwitch() = 0;
 	virtual void ExitSpeedSwitch() = 0;
 

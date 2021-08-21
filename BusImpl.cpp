@@ -319,7 +319,7 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access, bool apu_access)
 						dma->InitiateGDMATransfer(data);
 					}
 				}
-				else if (!cpu->HALT && !cpu->STOP) // do not start HDMA if CPU is in HALT or STOP mode
+				else if (!cpu->in_halt_mode && !cpu->in_stop_mode) // do not start HDMA if CPU is in HALT or STOP mode
 				{
 					IO(HDMA5) &= 0x7F; // clear bit 7
 					dma->InitiateHDMATransfer(data);
@@ -659,6 +659,51 @@ void BusImpl::Reset(bool execute_boot_rom)
 		IO(LCDC) = 0x91; IO(BGP) = 0xFC; IO(OBP0) = 0xFF; IO(OBP1) = 0xFF;
 		IO(STAT) = 0x85; IO(IF) = 0xE1;
 	}
+
+	m_cycle_counter = 0;
+}
+
+
+u8 BusImpl::ReadCycle(u16 addr)
+{
+	u8 data = Read(addr);
+	// apu, ppu and timer is updated each t-cycle (see e.g. ppu.Update()), the rest each m-cycle
+	apu->Update();
+	dma->Update();
+	ppu->Update();
+	serial->Update();
+	timer->Update();
+
+	m_cycle_counter++;
+	return data;
+}
+
+
+void BusImpl::WriteCycle(u16 addr, u8 data)
+{
+	Write(addr, data);
+
+	apu->Update();
+	dma->Update();
+	ppu->Update();
+	serial->Update();
+	timer->Update();
+
+	m_cycle_counter++;
+}
+
+
+void BusImpl::WaitCycle(const unsigned cycles)
+{
+	for (int i = 0; i < cycles; i++)
+	{
+		apu->Update();
+		dma->Update();
+		ppu->Update();
+		serial->Update();
+		timer->Update();
+	}
+	m_cycle_counter += cycles;
 }
 
 
@@ -703,4 +748,6 @@ void BusImpl::State(Serialization::BaseFunctor& functor)
 	functor.fun(&memory, sizeof(Memory));
 	functor.fun(&current_VRAM_bank, sizeof(u8));
 	functor.fun(&current_WRAM_bank, sizeof(u8));
+
+	functor.fun(&m_cycle_counter, sizeof(unsigned));
 }

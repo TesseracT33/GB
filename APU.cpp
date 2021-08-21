@@ -45,10 +45,15 @@ void APU::Reset()
 	SDL_OpenAudio(&audio_spec, &obtainedSpec);
 	SDL_PauseAudio(0);
 
+	ResetAllRegisters();
+
 	// set wave ram pattern (https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware)
 	u8* wav_start = bus->ReadIOPointer(Bus::Addr::WAV_START);
 	const u8* source = (System::mode == System::Mode::DMG ? dmg_initial_wave_ram : cgb_initial_wave_ram);
 	memcpy(wav_start, source, 0x10 * sizeof(u8));
+
+	ch3_output_level = ch3_sample_buffer = frame_seq_step_counter = sample_counter = 0;
+	duty[CH1] = duty[CH2] = 0;
 }
 
 
@@ -68,6 +73,9 @@ void APU::ResetAllRegisters()
 		channel_is_enabled[i] = DAC_is_enabled[i] = length_is_enabled[i] = 0;
 		volume[i] = freq_timer[i] = 0;
 	}
+
+	wave_ram_accessible_by_cpu_when_ch3_enabled = true;
+	first_half_of_length_period = false;
 
 	// todo: what other regs to reset?
 }

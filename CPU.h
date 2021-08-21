@@ -14,7 +14,7 @@ class CPU final : public Component
 {
 
 #ifdef DEBUG
-	std::ofstream ofs = std::ofstream(DEBUG_LOG_PATH, std::ofstream::out);
+	std::ofstream ofs{ DEBUG_LOG_PATH, std::ofstream::out };
 	int instruction_counter = 1;
 #endif
 
@@ -23,14 +23,14 @@ public:
 
 	Bus* bus;
 
-	bool HALT = false;
+	bool in_halt_mode = false;
 	bool HDMA_transfer_active = false; // refers to either HDMA or GDMA. During this time, the CPU is stopped
 	bool speed_switch_active = false;
-	bool STOP = false;
+	bool in_stop_mode = false;
 
 	void Initialize();
 	void Reset(bool execute_boot_rom);
-	void Update();
+	void Run();
 
 	void InitiateSpeedSwitch();
 	void ExitSpeedSwitch();
@@ -39,6 +39,9 @@ public:
 	void State(Serialization::BaseFunctor& functor) override;
 
 private:
+	const unsigned speed_switch_m_cycle_count = 2050;
+	const u16 interrupt_vector[5] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
+
 	// registers
 	u8 A, B, C, D, E, H, L;
 
@@ -47,133 +50,166 @@ private:
 
 	u16 SP, PC;
 
-	u8* IE{}, *IF{};
+	u8* IE, *IF;
 
-	// whether a jump has been performed when executing the current instruction, via e.g. CALL, RET, JP, etc.
-	// if true, this increases the number of m-cycles that the instruction takes
-	bool action_taken = false; 
 	bool EI_called = false;
-	bool HALT_bug = false;
+	bool halt_bug = false;
 	bool IME = false;
-	bool interrupt_dispatched_on_last_update = false;
 
-	const u16 interrupt_vector[5] = { 0x0040, 0x0048, 0x0050, 0x0058, 0x0060 };
-
-	unsigned m_cycles_instr = 0; // how many cycles the current instruction takes to execute
-	unsigned m_cycles_until_next_instr = 1;
-	unsigned speed_switch_m_cycles_remaining = 0;
 	unsigned instr_until_set_IME = 0;
+	unsigned speed_switch_m_cycles_remaining = 0;
 
-	const unsigned speed_switch_m_cycle_count = 2050;
+	u8 opcode; // opcode of instruction currently being executed
+	bool HL_set; // used for some instructions to indicate that an operand is (HL), e.g. in INC (HL)
+	u8 read_HL; // similar to above; used for some instructions as the value of (HL)
 
-	const unsigned opcode_m_cycle_len[0x100] =
-	{//x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF
-		1, 3, 2, 2, 1, 1, 2, 1, 5, 2, 2, 2, 1, 1, 2, 1, // 0x
-		0, 3, 2, 2, 1, 1, 2, 1, 3, 2, 2, 2, 1, 1, 2, 1, // 1x   note: cycle count for instr. 10h is set to 0. it is added manually in the function EnterSTOP()
-		2, 3, 2, 2, 1, 1, 2, 1, 2, 2, 2, 2, 1, 1, 2, 1, // 2x
-		2, 3, 2, 2, 3, 3, 3, 1, 2, 2, 2, 2, 1, 1, 2, 1, // 3x
+	void CheckInterrupts();
 
-		1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // 4x
-		1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // 5x
-		1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // 6x
-		2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, // 7x
+	u8  Read_u8()  { return bus->ReadCycle(PC++); };
+	u16 Read_u16() { PC += 2; return bus->ReadCycle(PC - 2) | bus->ReadCycle(PC - 1) << 8; };
+	s8  Read_s8()  { return (s8)bus->ReadCycle(PC++); };
 
-		1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // 8x
-		1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // 9x
-		1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // Ax
-		1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, // Bx
+	void WaitCycle(const unsigned cycles = 1) { bus->WaitCycle(cycles); };
 
-		2, 3, 3, 4, 3, 4, 2, 4, 2, 4, 3, 0, 3, 6, 2, 4, // Cx
-		2, 3, 3, 0, 3, 4, 2, 4, 2, 4, 3, 0, 3, 0, 2, 4, // Dx
-		3, 3, 2, 0, 0, 4, 2, 4, 4, 1, 4, 0, 0, 0, 2, 4, // Ex
-		3, 3, 2, 1, 0, 4, 2, 4, 3, 2, 4, 1, 0, 0, 2, 4  // Fx
-	};
+	bool GetCond();
+	u8 GetOpMod();
+	u8 GetOpDiv(u8 offset);
+	u8* GetOpModPointer();
+	u8* GetOpDivPointer(u8 offset);
 
-	// m-cycles that are added to the length of an instruction when a conditional jump has been performed, see the 'action_taken' variable
-	const unsigned opcode_m_cycle_len_jump[0x100] =
-	{//0x 1x 2x 3x 4x 5x 6x 7x 8x 9x Ax Bx Cx Dx Ex Fx
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // x0
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // x1
-		1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, // x2
-		1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, // x3
-
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // x4
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // x5
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // x6
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // x7
-
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // x8
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // x9
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // xA
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // xB
-
-		3, 0, 1, 0, 3, 0, 0, 0, 3, 0, 1, 0, 3, 0, 0, 0, // xC
-		3, 0, 1, 0, 3, 0, 0, 0, 3, 0, 1, 0, 3, 0, 0, 0, // xD
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // xE
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // xF
-	};
-
-	inline unsigned opcode_m_cycle_len_CB(u8 opcode)
-	{
-		// all CB opcodes of the form x6 or xE take 4 m-cycles, all others take 2 m-cycles,
-		// except if x=4,5,6,7, those take 3 m-cycles
-		// source: blargg instr_timing test
-		if ((opcode & 0xF) == 0x6 || (opcode & 0xF) == 0xE)
-			return (opcode >> 4 < 4 || opcode >> 4 > 7) ? 4 : 3;
-		return 2;
-	};
-
-	void ExecuteInstruction(u8 opcode);
-	unsigned OneInstruction();
-	unsigned CheckInterrupts();
-
-	inline u8  Read_u8()  { return bus->Read(PC++); };
-	inline u16 Read_u16() { PC += 2; return bus->Read(PC - 2) | bus->Read(PC - 1) << 8; };
-	inline s8  Read_s8()  { return (s8)bus->Read(PC++); };
+	// load instructions
+	void LD_r8_r8();
+	void LD_mHL_r8();
+	void LD_r8_u8();
+	void LD_mHL_u8();
+	void LD_r16_u16();
+	void LD_SP_HL();
+	void LD_mr16_A();
+	void LD_A_mr16();
+	void LD_u16_A();
+	void LD_A_u16();
+	void LD_u16_SP();
+	void LD_HL_SP_s8();
+	void LD_HLp_A();
+	void LD_HLm_A();
+	void LD_A_HLp();
+	void LD_A_HLm();
+	void LDH_u8_A();
+	void LDH_A_u8();
+	void LDH_C_A();
+	void LDH_A_C();
 
 	// arithmetic and logic instructions
-	void ADC(u8 op);
-	void ADD8(u8 op);
-	void ADD16(u16 op);
-	void AND(u8 op);
-	void CP(u8 op);
-	void DEC(u8& op);
-	void INC(u8& op);
-	void OR(u8 op);
-	void SBC(u8 op);
-	void SUB(u8 op);
-	void XOR(u8 op);
+	void ADC_r8();
+	void ADC_u8();
+	void ADD_A_r8();
+	void ADD_A_u8();
+	void ADD_HL();
+	void ADD_SP();
+	void AND_r8();
+	void AND_u8();
+	void CP_r8();
+	void CP_u8();
+	void DEC_r8();
+	void DEC_r16();
+	void INC_r8();
+	void INC_r16();
+	void OR_r8();
+	void OR_u8();
+	void SBC_r8();
+	void SBC_u8();
+	void SUB_r8();
+	void SUB_u8();
+	void XOR_r8();
+	void XOR_u8();
 
-	// bit operations instructions
-	void BIT(u8 pos, u8* reg);
-	void RES(u8 pos, u8* reg);
-	void SET(u8 pos, u8* reg);
-	void SWAP(u8* reg);
+	// bit operation instructions
+	void BIT();
+	void RES();
+	void SET();
+	void SWAP();
 
-	// bit shift instructions
-	void RL(u8* reg);
-	void RLC(u8* reg);
-	void RR(u8* reg);
-	void RRC(u8* reg);
-	void SLA(u8* reg);
-	void SRA(u8* reg);
-	void SRL(u8* reg);
+	// register rotation instructions
+	void RL();
+	void RLA();
+	void RLC();
+	void RLCA();
+	void RR();
+	void RRA();
+	void RRC();
+	void RRCA();
+	void SLA();
+	void SRA();
+	void SRL();
 
-	void CALL(bool cond);
-	void RET(bool cond);
-	void JR(bool cond);
-	void JP(bool cond);
-	void RST(u16 addr);
+	// branching instructions
+	void CALL();
+	void RET();
+	void RETI();
+	void JR();
+	void JP_u16();
+	void JP_HL();
+	void RST();
+
+	// prefixed instructions
+	void CB();
+
+	// misc instructions
+	void CCF();
+	void CPL();
+	void DAA();
+	void DI();
+	void EI();
+	void HALT();
+	void Illegal();
+	void NOP();
+	void POP();
+	void PUSH();
+	void SCF();
+	void STOP();
+
+	// helper
 	void PushPC();
 	void PopPC();
 
-	// prefixed instructions
-	void CB(u8 opcode);
+	typedef void (CPU::* instr_t)();
 
-	void DAA();
+	const instr_t instr_table[0x100] =
+	{
+		&CPU::NOP      , &CPU::LD_r16_u16, &CPU::LD_mr16_A, &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::RLCA,
+		&CPU::LD_u16_SP, &CPU::ADD_HL    , &CPU::LD_A_mr16, &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::RRCA,
+		&CPU::STOP     , &CPU::LD_r16_u16, &CPU::LD_mr16_A, &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::RLA ,
+		&CPU::JR       , &CPU::ADD_HL    , &CPU::LD_A_mr16, &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::RRA ,
+		&CPU::JR       , &CPU::LD_r16_u16, &CPU::LD_HLp_A , &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::DAA ,
+		&CPU::JR       , &CPU::ADD_HL    , &CPU::LD_A_HLp , &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::CPL ,
+		&CPU::JR       , &CPU::LD_r16_u16, &CPU::LD_HLm_A , &CPU::INC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_mHL_u8, &CPU::SCF ,
+		&CPU::JR       , &CPU::ADD_HL    , &CPU::LD_A_HLm , &CPU::DEC_r16, &CPU::INC_r8, &CPU::DEC_r8, &CPU::LD_r8_u8 , &CPU::CCF ,
 
-	void IllegalOpcode(u8 opcode);
+		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
+		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
+		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
+		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
+		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
+		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
+		&CPU::LD_mHL_r8, &CPU::LD_mHL_r8, &CPU::LD_mHL_r8, &CPU::LD_mHL_r8, &CPU::LD_mHL_r8, &CPU::LD_mHL_r8, &CPU::HALT     , &CPU::LD_mHL_r8,
+		&CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 , &CPU::LD_r8_r8 ,
 
-	void Stop();
-	void Halt();
+		&CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8, &CPU::ADD_A_r8,
+		&CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  , &CPU::ADC_r8  ,
+		&CPU::SUB_r8  , &CPU::SUB_r8  , &CPU::SUB_r8  , &CPU::SUB_r8  , &CPU::SUB_r8  , &CPU::SUB_r8  , &CPU::SUB_r8  , &CPU::SUB_r8  ,
+		&CPU::SBC_r8  , &CPU::SBC_r8  , &CPU::SBC_r8  , &CPU::SBC_r8  , &CPU::SBC_r8  , &CPU::SBC_r8  , &CPU::SBC_r8  , &CPU::SBC_r8  ,
+		&CPU::AND_r8  , &CPU::AND_r8  , &CPU::AND_r8  , &CPU::AND_r8  , &CPU::AND_r8  , &CPU::AND_r8  , &CPU::AND_r8  , &CPU::AND_r8  ,
+		&CPU::XOR_r8  , &CPU::XOR_r8  , &CPU::XOR_r8  , &CPU::XOR_r8  , &CPU::XOR_r8  , &CPU::XOR_r8  , &CPU::XOR_r8  , &CPU::XOR_r8  ,
+		&CPU::OR_r8   , &CPU::OR_r8   , &CPU::OR_r8   , &CPU::OR_r8   , &CPU::OR_r8   , &CPU::OR_r8   , &CPU::OR_r8   , &CPU::OR_r8   ,
+		&CPU::CP_r8   , &CPU::CP_r8   , &CPU::CP_r8   , &CPU::CP_r8   , &CPU::CP_r8   , &CPU::CP_r8   , &CPU::CP_r8   , &CPU::CP_r8   ,
+
+		&CPU::RET        , &CPU::POP     , &CPU::JP_u16  , &CPU::JP_u16 , &CPU::CALL   , &CPU::PUSH   , &CPU::ADD_A_u8, &CPU::RST,
+		&CPU::RET        , &CPU::RET     , &CPU::JP_u16  , &CPU::CB     , &CPU::CALL   , &CPU::CALL   , &CPU::ADC_u8  , &CPU::RST,
+		&CPU::RET        , &CPU::POP     , &CPU::JP_u16  , &CPU::Illegal, &CPU::CALL   , &CPU::PUSH   , &CPU::SUB_u8  , &CPU::RST,
+		&CPU::RET        , &CPU::RETI    , &CPU::JP_u16  , &CPU::Illegal, &CPU::CALL   , &CPU::Illegal, &CPU::SBC_u8  , &CPU::RST,
+		&CPU::LDH_u8_A   , &CPU::POP     , &CPU::LDH_C_A , &CPU::Illegal, &CPU::Illegal, &CPU::PUSH   , &CPU::AND_u8  , &CPU::RST,
+		&CPU::ADD_SP     , &CPU::JP_HL   , &CPU::LD_u16_A, &CPU::Illegal, &CPU::Illegal, &CPU::Illegal, &CPU::XOR_u8  , &CPU::RST,
+		&CPU::LDH_A_u8   , &CPU::POP     , &CPU::LDH_A_C , &CPU::DI     , &CPU::Illegal, &CPU::PUSH   , &CPU::OR_u8   , &CPU::RST,
+		&CPU::LD_HL_SP_s8, &CPU::LD_SP_HL, &CPU::LD_A_u16, &CPU::EI     , &CPU::Illegal, &CPU::Illegal, &CPU::CP_u8   , &CPU::RST
+	};
 };
