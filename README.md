@@ -1,5 +1,5 @@
 # Summary
-gb-chan is a Nintendo Game Boy emulator written in C++ with a graphical interface (using wxWidgets-3). It relies on SDL2 for video, audio and input. Its PPU implementation does per-pixel rendering.
+gb-chan is a Nintendo Game Boy emulator written in C++ with a graphical interface (using wxWidgets-3). It relies on SDL2 for video, audio and input. Its CPU implementation is sub-instruction accurate (in attempt), and its PPU implementation does per-pixel rendering.
 
 ![gb1](https://thumbs2.imgbox.com/ee/bf/pPp2HJnb_t.png)
 ![gb2](https://thumbs2.imgbox.com/23/90/hb3IwDTb_t.png)
@@ -24,11 +24,10 @@ The Nintendo Game Boy is a handheld video game system initially released in 1989
 
 # Future features (hopefully)
 - Game Boy Colour support (already underway).
-- Refactor the CPU implementation to make it sub-instruction accurate.
 
 # Tests
 The emulator passes the following tests:
-- Blargg -- cpu_instr, instr_timing, halt_bug
+- Blargg -- cpu_instr, instr_timing, halt_bug, mem_timing, mem_timing-2
 - mattcurrie -- dmg-acid2
 - mooneye -- all MBC1, MBC2 and MBC5 tests, except for mbc1/multicart_rom_8Mb
 
