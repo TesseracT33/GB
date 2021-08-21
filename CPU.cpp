@@ -1105,6 +1105,7 @@ void CPU::CheckInterrupts()
 		u8 AND = *IF & *IE & 0x1F;
 		if (AND != 0) // if any enabled interrupt is requested
 		{
+			WaitCycle(2);
 			PushPC();
 
 			for (int i = 0; i <= 4; i++)
@@ -1112,14 +1113,13 @@ void CPU::CheckInterrupts()
 				if (CheckBit(AND, i) == 1)
 				{
 					PC = interrupt_vector[i];
-					ClearBit(IF, i);
+					WaitCycle();
+					ClearBit(IF, i); // todo: when does this happen exactly?
 				}
 			}
 
-			// todo: implement finer fetching of e.g. IF, IE
-			// takes 5 m-cycles to dispatch interrupt, an extra m-cycle if in HALT mode
-			// however, two of these cycles are already counted in PushPC()
-			WaitCycle(in_halt_mode ? 3 : 4);
+			if (in_halt_mode)
+				WaitCycle();
 			IME = in_halt_mode = false;
 			return;
 		}
