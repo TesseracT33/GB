@@ -137,7 +137,7 @@ void PPU::Update()
 				if (t_cycle_counter % OAM_check_interval == 0 && sprite_buffer.size() < 10 && can_access_OAM)
 					Search_OAM_for_Sprites();
 			}
-			else if (pixel_shifter.xPos < resolution_x)
+			else if (pixel_shifter.x_pos < resolution_x)
 			{
 				UpdatePixelFetchers();
 			}
@@ -205,7 +205,11 @@ void PPU::EnableLCD()
 
 void PPU::CheckSTATInterrupt()
 {
-	if (!LCD_enabled) return;
+	if (!LCD_enabled)
+	{
+		STAT_cond_met_LY_LYC = STAT_cond_met_LCD_mode = false;
+		return;
+	}
 
 	bool STAT_LY_EQUALS_LYC = *LY == *LYC;
 	STAT_LY_EQUALS_LYC ? SetBit(STAT, 2) : ClearBit(STAT, 2);
@@ -295,23 +299,23 @@ void PPU::FetchBackgroundTile()
 
 	case TileFetchStep::TileNum:
 	{
-		u16 tileNumAddress;
-		u8 tileCol, tileRow;
+		u16 tile_num_addr;
+		u8 tile_col, tile_row;
 		if (bg_tile_fetcher.window_reached)
 		{
-			tileNumAddress = addr_window_tile_map;
-			tileCol = bg_tile_fetcher.xPos;
-			tileRow = bg_tile_fetcher.window_line_counter / 8;
+			tile_num_addr = addr_window_tile_map;
+			tile_col = bg_tile_fetcher.x_pos;
+			tile_row = bg_tile_fetcher.window_line_counter / 8;
 		}
 		else
 		{
-			tileNumAddress = addr_BG_tile_map;
-			tileCol = (bg_tile_fetcher.xPos + *SCX / 8) & 0x1F;
-			tileRow = ((*LY + *SCY) & 0xFF) / 8;
+			tile_num_addr = addr_BG_tile_map;
+			tile_col = (bg_tile_fetcher.x_pos + *SCX / 8) & 0x1F;
+			tile_row = ((*LY + *SCY) & 0xFF) / 8;
 		}
-		tileNumAddress += (32 * tileRow + tileCol) & 0x3FF;
+		tile_num_addr += (32 * tile_row + tile_col) & 0x3FF;
 
-		tile_num = tile_data_signed ? (s8)bus->Read(tileNumAddress, true) : bus->Read(tileNumAddress, true);
+		tile_num = tile_data_signed ? (s8)bus->Read(tile_num_addr, true) : bus->Read(tile_num_addr, true);
 
 		bg_tile_fetcher.step = TileFetchStep::TileDataLow;
 		bg_tile_fetcher.t_cycles_until_update = 1;
@@ -338,11 +342,11 @@ void PPU::FetchBackgroundTile()
 		tile_data_high = bus->Read(tile_addr + 1, true);
 		bg_tile_fetcher.t_cycles_until_update = 1;
 		// The first time the background fetcher completes step 3 on a scanline, the status is fully reset and operation restarts at Step 1.
-		if (bg_tile_fetcher.step3_completed_on_current_scanline)
+		if (bg_tile_fetcher.step_3_completed_on_current_scanline)
 			bg_tile_fetcher.step = TileFetchStep::PushTile;
 		else
 		{
-			bg_tile_fetcher.step3_completed_on_current_scanline = true;
+			bg_tile_fetcher.step_3_completed_on_current_scanline = true;
 			bg_tile_fetcher.step = TileFetchStep::TileNum;
 		}
 		break;
@@ -362,8 +366,8 @@ void PPU::FetchBackgroundTile()
 			background_FIFO.emplace(col_id);
 		}
 
-		bg_tile_fetcher.xPos++;
-		bg_tile_fetcher.xPos &= 0x1F;
+		bg_tile_fetcher.x_pos++;
+		bg_tile_fetcher.x_pos &= 0x1F;
 
 		bg_tile_fetcher.step = TileFetchStep::TileNum;
 		bg_tile_fetcher.t_cycles_until_update = 1;
@@ -385,7 +389,7 @@ void PPU::FetchSprite()
 	{
 	case TileFetchStep::TileNum:
 	{
-		if (!sprite_tile_fetcher.sprite.ySize16)
+		if (!sprite_tile_fetcher.sprite.y_size_16)
 		{
 			tile_num = sprite_tile_fetcher.sprite.tile_num;
 		}
@@ -394,15 +398,15 @@ void PPU::FetchSprite()
 			// if 8x16 sprites are used, find if low or high tile is used for the current scanline
 			// To calculate the tile number of the top tile, the tile number in the OAM entry is used and the least significant bit is set to 0. 
 			// The tile number of the bottom tile is calculated by setting the least significant bit to 1.
-			if (*LY < sprite_tile_fetcher.sprite.yPos - 16 + 8)
+			if (*LY < sprite_tile_fetcher.sprite.y_pos - 16 + 8)
 			{
-				if (!sprite_tile_fetcher.sprite.yFlip) tile_num = sprite_tile_fetcher.sprite.tile_num & 0xFE;
-				else                                   tile_num = sprite_tile_fetcher.sprite.tile_num | 1;
+				if (!sprite_tile_fetcher.sprite.y_flip) tile_num = sprite_tile_fetcher.sprite.tile_num & 0xFE;
+				else                                    tile_num = sprite_tile_fetcher.sprite.tile_num | 1;
 			}
 			else
 			{
-				if (!sprite_tile_fetcher.sprite.yFlip) tile_num = sprite_tile_fetcher.sprite.tile_num | 1;
-				else                                   tile_num = sprite_tile_fetcher.sprite.tile_num & 0xFE;
+				if (!sprite_tile_fetcher.sprite.y_flip) tile_num = sprite_tile_fetcher.sprite.tile_num | 1;
+				else                                    tile_num = sprite_tile_fetcher.sprite.tile_num & 0xFE;
 			}
 		}
 		sprite_tile_fetcher.step = TileFetchStep::TileDataLow;
@@ -413,10 +417,10 @@ void PPU::FetchSprite()
 	case TileFetchStep::TileDataLow:
 	{
 		tile_addr = 0x8000 + 16 * tile_num;
-		if (!sprite_tile_fetcher.sprite.yFlip)
-			tile_addr += 2 * ((*LY - sprite_tile_fetcher.sprite.yPos + 16) % 8);
+		if (!sprite_tile_fetcher.sprite.y_flip)
+			tile_addr += 2 * (    (*LY - sprite_tile_fetcher.sprite.y_pos + 16) % 8);
 		else
-			tile_addr += 2 * (7 - (*LY - sprite_tile_fetcher.sprite.yPos + 16) % 8);
+			tile_addr += 2 * (7 - (*LY - sprite_tile_fetcher.sprite.y_pos + 16) % 8);
 
 		tile_data_low = bus->Read(tile_addr, true);
 
@@ -439,7 +443,7 @@ void PPU::FetchSprite()
 		// e.g., if pixel shifter xPos = 0, then a sprite with an X-value of 8 would have all 8 pixels loaded, 
 		// while a sprite with an X-value of 7 would only have the rightmost 7 pixels loaded
 		// No need to worry about pixels going off the right side of the screen, since the PPU wouldn't push these pixels anyways
-		int pixels_to_ignore_left = std::max(0, 8 - sprite_tile_fetcher.sprite.xPos + pixel_shifter.xPos);
+		int pixels_to_ignore_left = std::max(0, 8 - sprite_tile_fetcher.sprite.x_pos + pixel_shifter.x_pos);
 
 		if (obj_priority_mode == OBJ_Priority_Mode::OAM_index)
 		{
@@ -449,7 +453,7 @@ void PPU::FetchSprite()
 		// Pixel 0 in the tile is bit 7 of tile data. Pixel 1 is bit 6 etc..
 		// insert as many pixels into FIFO as there are free slots
 		// if FIFO already contains n no. of pixels, insert only the last 8 - n pixels from the current sprite
-		if (!sprite_tile_fetcher.sprite.xFlip)
+		if (!sprite_tile_fetcher.sprite.x_flip)
 		{
 			for (int i = 7 - std::max((int)sprite_FIFO.size(), pixels_to_ignore_left); i >= 0; i--)
 			{
@@ -486,7 +490,7 @@ void PPU::TryToInitiateSpriteFetch()
 	{
 		for (size_t i = 0; i < no_of_sprites; i++)
 		{
-			if (sprite_buffer[i].xPos - 8 <= pixel_shifter.xPos)
+			if (sprite_buffer[i].x_pos - 8 <= pixel_shifter.x_pos)
 			{
 				sprite_tile_fetcher.sprite = sprite_buffer[i];
 				sprite_buffer.erase(sprite_buffer.begin() + i);
@@ -551,14 +555,12 @@ void PPU::ShiftPixel()
 		// todo: emulate this better? Currently, a black pixel is pushed only if the speed switch is active during the same t-cycle as the ppu shifts pixels
 		if (!can_access_VRAM)
 			col = color_black;
+		else if (System::mode == System::Mode::CGB && BG_master_priority || !BG_enabled && System::mode != System::Mode::CGB)
+			col = GetColourFromPixel(sprite_pixel, TileType::OBJ);
+		else if (!sprites_enabled || sprite_pixel.col_id == 0 || sprite_pixel.bg_priority && bg_pixel.col_id != 0)
+			col = GetColourFromPixel(bg_pixel, TileType::BG);
 		else
-		{
-			bool req_for_bg = (System::mode == System::Mode::DMG ? BG_enabled : BG_master_priority);
-			if (sprite_pixel.col_id == 0 || (req_for_bg && sprite_pixel.bg_priority && (!sprites_enabled || bg_pixel.col_id != 0)))
-				col = GetColourFromPixel(bg_pixel, TileType::BG);
-			else
-				col = GetColourFromPixel(sprite_pixel, TileType::OBJ);
-		}
+			col = GetColourFromPixel(sprite_pixel, TileType::OBJ);
 
 		sprite_FIFO.pop();
 	}
@@ -582,7 +584,7 @@ void PPU::PushPixel(SDL_Color& col)
 	framebuffer[framebuffer_pos + 2] = col.b;
 	framebuffer_pos += 3;
 
-	if (++pixel_shifter.xPos == resolution_x)
+	if (++pixel_shifter.x_pos == resolution_x)
 		EnterHBlank();
 
 	// After each pixel is shifted out, the PPU checks if it has reached the window.
@@ -595,32 +597,32 @@ void PPU::PushPixel(SDL_Color& col)
 // 2 t-cycles per sprite and function call
 void PPU::Search_OAM_for_Sprites()
 {
-	u8 yPos = bus->Read(OAM_sprite_addr, true);
+	u8 y_pos = bus->Read(OAM_sprite_addr, true);
 
-	if (*LY >= yPos - 16 && *LY < yPos - 16 + sprite_height)
+	if (*LY >= y_pos - 16 && *LY < y_pos - 16 + sprite_height)
 	{
-		u8 xPos = bus->Read(OAM_sprite_addr + 1, true);
-		if (xPos > 0)
+		u8 x_pos = bus->Read(OAM_sprite_addr + 1, true);
+		if (x_pos > 0)
 		{
-			u8 tileNum = bus->Read(OAM_sprite_addr + 2, true);
+			u8 tile_num = bus->Read(OAM_sprite_addr + 2, true);
 			u8 flags = bus->Read(OAM_sprite_addr + 3, true);
 
-			bool xFlip = CheckBit(flags, 5);
-			bool yFlip = CheckBit(flags, 6);
+			bool x_flip = CheckBit(flags, 5);
+			bool y_flip = CheckBit(flags, 6);
 			bool bg_priority = CheckBit(flags, 7);
-			bool ySize16 = sprite_height == 16;
+			bool y_size_16 = sprite_height == 16;
 
 			if (System::mode != System::Mode::CGB)
 			{
 				u8 palette = CheckBit(flags, 4);
-				sprite_buffer.emplace_back(tileNum, yPos, xPos, palette, bg_priority, yFlip, xFlip, ySize16);
+				sprite_buffer.emplace_back(tile_num, y_pos, x_pos, palette, bg_priority, y_flip, x_flip, y_size_16);
 			}
 			else
 			{
 				u8 palette = flags & 7;
 				bool VRAM_bank = CheckBit(flags, 3); // todo: how does this dictate which bank is used? isn't this set by writing to VBK?
 				int OAM_index = 0.25 * (OAM_sprite_addr - Bus::Addr::OAM_START);
-				sprite_buffer.emplace_back(tileNum, yPos, xPos, palette, bg_priority, yFlip, xFlip, ySize16, VRAM_bank, OAM_index);
+				sprite_buffer.emplace_back(tile_num, y_pos, x_pos, palette, bg_priority, y_flip, x_flip, y_size_16, VRAM_bank, OAM_index);
 			}
 		}
 	}
@@ -674,10 +676,10 @@ bool PPU::CheckIfReachedWindow()
 {
 	// After each pixel is shifted out, the PPU checks if it has reached the window.
 	// If all of the below conditions apply, Window Fetching starts.
-	if (window_display_enabled && BG_enabled && WY_equals_LY_in_current_frame && pixel_shifter.xPos >= *WX - 7)
+	if (window_display_enabled && BG_enabled && WY_equals_LY_in_current_frame && pixel_shifter.x_pos >= *WX - 7)
 	{
 		bg_tile_fetcher.StartOver();
-		bg_tile_fetcher.xPos = 0;
+		bg_tile_fetcher.x_pos = 0;
 		bg_tile_fetcher.window_reached = true;
 		while (!background_FIFO.empty()) background_FIFO.pop();
 
@@ -719,39 +721,34 @@ void PPU::SetColour(int id, SDL_Color color)
 
 void PPU::Set_CGB_Colour(u8 index, u8 data, bool BGP)
 {
-	u16 colour;
+	auto GetSDLColFromPaletteData = [&](u16 data)
+	{
+		u8 red   =  data        & 0x1F;
+		u8 green = (data >>  5) & 0x1F;
+		u8 blue  = (data >> 10) & 0x1F;
+
+		// convert each 5-bit channel to 8-bit channels (https://github.com/mattcurrie/dmg-acid2)
+		red   = (red   << 3) | (red   >> 2);
+		green = (green << 3) | (green >> 2);
+		blue  = (blue  << 3) | (blue  >> 2);
+
+		return SDL_Color{ red, green, blue, 0 };
+	};
+
+	u16 colour_data;
 	if (BGP)
 	{
 		BGP_reg[index] = data;
-		if (index % 2) colour = BGP_reg[index - 1] | BGP_reg[index] << 8;
-		else           colour = BGP_reg[index] | BGP_reg[index + 1] << 8;
-
-		u8 red = colour & 0x1F;
-		u8 green = (colour >> 5) & 0x1F;
-		u8 blue = (colour >> 10) & 0x1F;
-
-		// convert each 5-bit channel to 8-bit channels (https://github.com/mattcurrie/dmg-acid2)
-		red = (red << 3) | (red >> 2);
-		green = (green << 3) | (green >> 2);
-		blue = (blue << 3) | (blue >> 2);
-
-		BGP_GBC[index / 2] = { red, green, blue, 0 };
+		if (index % 2) colour_data = BGP_reg[index - 1] | BGP_reg[index] << 8;
+		else           colour_data = BGP_reg[index] | BGP_reg[index + 1] << 8;
+		BGP_GBC[index / 2] = GetSDLColFromPaletteData(colour_data);
 	}
 	else // OBP
 	{
 		OBP_reg[index] = data;
-		if (index % 2) colour = OBP_reg[index - 1] | OBP_reg[index] << 8;
-		else           colour = OBP_reg[index] | OBP_reg[index + 1] << 8;
-
-		u8 red = colour & 0x1F;
-		u8 green = (colour >> 5) & 0x1F;
-		u8 blue = (colour >> 10) & 0x1F;
-
-		red = (red << 3) | (red >> 2);
-		green = (green << 3) | (green >> 2);
-		blue = (blue << 3) | (blue >> 2);
-
-		OBP_GBC[index / 2] = { red, green, blue, 0 };
+		if (index % 2) colour_data = OBP_reg[index - 1] | OBP_reg[index] << 8;
+		else           colour_data = OBP_reg[index] | OBP_reg[index + 1] << 8;
+		OBP_GBC[index / 2] = GetSDLColFromPaletteData(colour_data);
 	}
 }
 

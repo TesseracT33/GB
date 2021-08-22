@@ -67,65 +67,35 @@ private:
 	// either DMG or CGB
 	struct Pixel
 	{
-		u8 col_id = 0; // a value between 0 and 3
-		u8 palette = 0; // on CGB a value between 0 and 7 and on DMG this only applies to sprites (0 or 1)
-		u8 sprite_priority = 0; // on CGB this is the OAM index for the sprite and on DMG this doesn’t exist
-		bool bg_priority = 0; // holds the value of the OBJ-to-BG Priority bit
+		u8 col_id; // a value between 0 and 3
+		u8 palette; // on CGB a value between 0 and 7 and on DMG this only applies to sprites (0 or 1)
+		u8 sprite_priority; // on CGB this is the OAM index for the sprite and on DMG this doesn’t exist
+		bool bg_priority; // holds the value of the OBJ-to-BG Priority bit
 
-		static const size_t size = sizeof(u8) * 3 + sizeof(bool);
-
-		Pixel() = default;
-		// use: BG pixels on DMG
-		Pixel(u8 col_id) { this->col_id = col_id; }
-		// use: BG pixels on CGB
-		Pixel(u8 col_id, u8 palette) { this->col_id = col_id; this->palette = palette; }
-		// use: OAM pixels on DMG
-		Pixel(u8 col_id, u8 palette, bool bg_priority) {
-			this->col_id = col_id; this->palette = palette; this->bg_priority = bg_priority;
-		}
-		// use: OAM pixels on CGB
-		Pixel(u8 col_id, u8 palette, u8 sprite_priority, bool bg_priority) {
-			this->col_id = col_id; this->palette = palette; this->sprite_priority = sprite_priority; this->bg_priority = bg_priority;
-		}
+		// BG  pixels on DMG: arg 1       only
+		// BG  pixels on CGB: arg 1, 2    only
+		// OAM pixels on DMG: arg 1, 2, 3 only
+		// OAM pixels on CGB: all arguments
+		Pixel(u8 _col_id = 0, u8 _palette = 0, bool _bg_priority = 0, u8 _sprite_priority = 0)
+			: col_id(_col_id), palette(_palette), bg_priority(_bg_priority), sprite_priority(_sprite_priority) {}
 	};
 
 	// either DMG or CGB
 	struct Sprite
 	{
-		u8 tile_num = 0, yPos = 0, xPos = 0, palette = 0;
-		bool bg_priority = 0, yFlip = 0, xFlip = 0, ySize16 = 0;
+		u8 tile_num = 0, y_pos = 0, x_pos = 0, palette = 0;
+		bool bg_priority = 0, y_flip = 0, x_flip = 0, y_size_16 = 0;
 
 		// CBG-specific
 		bool VRAM_bank = 0;
 		int OAM_index = 0;
 
 		Sprite() = default;
-		// DMG sprite
-		Sprite(u8 tileNum, u8 yPos, u8 xPos, u8 palette, bool bg_priority, bool yFlip, bool xFlip, bool ySize16)
-		{
-			this->tile_num = tileNum;
-			this->yPos = yPos;
-			this->xPos = xPos;
-			this->palette = palette;
-			this->bg_priority = bg_priority;
-			this->yFlip = yFlip;
-			this->xFlip = xFlip;
-			this->ySize16 = ySize16;
-		}
-		// CGB sprite
-		Sprite(u8 tile_num, u8 yPos, u8 xPos, u8 palette, bool bg_priority, bool yFlip, bool xFlip, bool ySize16, bool VRAM_bank, int OAM_index)
-		{
-			this->tile_num = tile_num;
-			this->yPos = yPos;
-			this->xPos = xPos;
-			this->palette = palette;
-			this->bg_priority = bg_priority;
-			this->yFlip = yFlip;
-			this->xFlip = xFlip;
-			this->ySize16 = ySize16;
-			this->VRAM_bank = VRAM_bank;
-			this->OAM_index = OAM_index;
-		}
+
+		// The two last arguments are only supplied for CGB sprites
+		Sprite(u8 _tile_num, u8 _y_pos, u8 _x_pos, u8 _palette, bool _bg_priority, bool _y_flip, bool _x_flip, bool _y_size_16, bool _VRAM_bank = 0, int _OAM_index = 0)
+			: tile_num(_tile_num), y_pos(_y_pos), x_pos(_x_pos), palette(_palette), bg_priority(_bg_priority), y_flip(_y_flip),
+			x_flip(_x_flip), y_size_16(_y_size_16), VRAM_bank(_VRAM_bank), OAM_index(_OAM_index) {}
 	};
 
 	enum class TileFetchStep { TileNum, TileDataLow, TileDataHigh, PushTile };
@@ -135,11 +105,13 @@ private:
 		bool paused = false;
 		TileFetchStep step = TileFetchStep::TileNum;
 		int t_cycles_until_update = 0;
-		u8 xPos = 0;
+		u8 x_pos = 0;
 
 		bool window_reached = false;
-		bool step3_completed_on_current_scanline = false;
+		bool step_3_completed_on_current_scanline = false;
 		int window_line_counter = -1; // set to 0 when window_reached is set to true during a scanline for the first time in a frame
+
+		unsigned leftmost_pixels_to_ignore;
 
 		void StartOver()
 		{
@@ -150,8 +122,8 @@ private:
 		{
 			step = TileFetchStep::TileNum;;
 			t_cycles_until_update = 0;
-			paused = window_reached = step3_completed_on_current_scanline = false;
-			xPos = 0;
+			paused = window_reached = step_3_completed_on_current_scanline = false;
+			x_pos = 0;
 			if (reset_window_line_counter)
 				window_line_counter = -1;
 		}
@@ -175,13 +147,13 @@ private:
 
 	struct PixelShifter
 	{
-		u8 xPos = 0;
+		u8 x_pos = 0;
 		int t_cycles_until_update = 0;
 		bool paused = false;
 
 		void Reset()
 		{
-			xPos = 0;
+			x_pos = 0;
 			t_cycles_until_update = 0;
 			paused = false;
 		}
