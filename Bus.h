@@ -115,5 +115,7 @@ public:
 
 	// helper function for debugging
 	virtual u16 GetCurrentRomBank() = 0;
+
+	unsigned m_cycle_counter = 0;
 };
 

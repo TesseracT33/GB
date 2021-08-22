@@ -1040,49 +1040,55 @@ void CPU::STOP() // STOP    len: 4t
 
 void CPU::Run()
 {
-	if (HDMA_transfer_active)
+	bus->m_cycle_counter = 0;
+
+	// run the cpu for a whole frame
+	while (bus->m_cycle_counter < System::m_cycles_per_frame)
 	{
-		WaitCycle();
-		return;
-	}
-	if (speed_switch_active)
-	{
-		WaitCycle();
-		if (--speed_switch_m_cycles_remaining == 0)
-			ExitSpeedSwitch();
-		return;
-	}
-	if (in_halt_mode)
-	{
+		if (HDMA_transfer_active)
+		{
+			WaitCycle();
+			continue;
+		}
+		if (speed_switch_active)
+		{
+			WaitCycle();
+			if (--speed_switch_m_cycles_remaining == 0)
+				ExitSpeedSwitch();
+			continue;
+		}
+		if (in_halt_mode)
+		{
+			CheckInterrupts();
+			continue;
+		}
+
 		CheckInterrupts();
-		return;
-	}
 
-	CheckInterrupts();
+		opcode = bus->ReadCycle(PC);
 
-	opcode = bus->ReadCycle(PC);
+		#ifdef DEBUG
+				char buf[200]{};
+				sprintf(buf, "#%i\tPC: %04X\tOP: %02X\tSP: %04X\tAF: %04X\tBC: %04X\tDE: %04X\tHL: %04X\tIME: %i\tIE: %02X\tIF: %02X\tLCDC: %02X\tSTAT: %02X\tLY: %02X\tROM: %04X",
+					instruction_counter++, (int)PC, (int)opcode, (int)SP, (int)AF, (int)BC, (int)DE, (int)HL, (int)IME,
+					(int)bus->Read(Bus::Addr::IE), (int)bus->Read(Bus::Addr::IF), (int)bus->Read(Bus::Addr::LCDC), (int)bus->Read(Bus::Addr::STAT), (int)bus->Read(Bus::Addr::LY), (int)bus->GetCurrentRomBank());
+				ofs << buf << std::endl;
+		#endif
 
-	#ifdef DEBUG
-		char buf[200]{};
-		sprintf(buf, "#%i\tPC: %04X\tOP: %02X\tSP: %04X\tAF: %04X\tBC: %04X\tDE: %04X\tHL: %04X\tIME: %i\tIE: %02X\tIF: %02X\tLCDC: %02X\tSTAT: %02X\tLY: %02X\tROM: %04X",
-			instruction_counter++, (int)PC, (int)opcode, (int)SP, (int)AF, (int)BC, (int)DE, (int)HL, (int)IME,
-			(int)bus->Read(Bus::Addr::IE), (int)bus->Read(Bus::Addr::IF), (int)bus->Read(Bus::Addr::LCDC), (int)bus->Read(Bus::Addr::STAT), (int)bus->Read(Bus::Addr::LY), (int)bus->GetCurrentRomBank());
-		ofs << buf << std::endl;
-	#endif
+		// If the previous instruction was HALT, there is a hardware bug in which PC is not incremented after the current instruction
+		if (!halt_bug)
+			PC++;
+		else
+			halt_bug = false;
 
-	// If the previous instruction was HALT, there is a hardware bug in which PC is not incremented after the current instruction
-	if (!halt_bug)
-		PC++;
-	else
-		halt_bug = false;
+		instr_t instr = instr_table[opcode];
+		std::invoke(instr, this);
 
-	instr_t instr = instr_table[opcode];
-	std::invoke(instr, this);
-
-	if (EI_called && instr_until_set_IME-- == 0)
-	{
-		IME = 1;
-		EI_called = false;
+		if (EI_called && instr_until_set_IME-- == 0)
+		{
+			IME = 1;
+			EI_called = false;
+		}
 	}
 }
 

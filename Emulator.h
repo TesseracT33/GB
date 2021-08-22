@@ -68,10 +68,7 @@ public:
 	std::string dmg_boot_path = "./DMG_boot.gb", cgb_boot_path = "./CGB_boot.gbc";
 
 private:
-	const unsigned m_cycles_per_frame_DMG = 17556;
-	const unsigned m_cycles_per_sec_DMG = 1048576;
-	const unsigned microseconds_per_frame_DMG = double(m_cycles_per_frame_DMG) / double(m_cycles_per_sec_DMG) * 1E+6; // 16742
-	unsigned m_cycles_per_frame = m_cycles_per_frame_DMG; // note: this var is not affected by 'emulation_speed', only by 'speed_mode'
+	const unsigned microseconds_per_frame_DMG = double(System::m_cycles_per_frame_DMG) / double(System::m_cycles_per_sec_DMG) * 1E+6; // 16742
 	unsigned microseconds_per_frame = microseconds_per_frame_DMG; // not affected by 'speed_mode', only by 'emulation_speed'
 
 	bool save_state_on_next_cycle = false;

@@ -22,8 +22,6 @@ public:
 	Serial* serial;
 	Timer* timer;
 
-	unsigned m_cycle_counter = 0;
-
 	bool LoadBootRom(const std::string& boot_path);
 	void Write(u16 addr, u8 data, bool ppu_access = false, bool apu_access = false);
 	u8   Read(u16 addr, bool ppu_access = false, bool apu_access = false);

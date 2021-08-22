@@ -119,19 +119,14 @@ void Emulator::MainLoop()
 
 	long long microseconds_since_fps_update = 0; // how many microseconds since the fps window label was updated
 	int frames_since_fps_update = 0; // same as above but no. of frames
-	bus.m_cycle_counter = 0;
 
 	while (emu_is_running && !emu_is_paused)
 	{
 		auto frame_start_t = std::chrono::steady_clock::now();
 
-		// execute one cpu instruction at a time, until the required number of cycles have elapsed (stored in bus)
-		
-		while (bus.m_cycle_counter < m_cycles_per_frame)
-		{
-			cpu.Run();
-		}
-		bus.m_cycle_counter -= m_cycles_per_frame;
+		// run the cpu for a whole frame
+		cpu.Run();
+
 		joypad.PollInput();
 
 		if (load_state_on_next_cycle)
