@@ -941,7 +941,7 @@ void CPU::DI() // DI    len: 4t
 void CPU::EI() // EI    len: 4t
 {
 	EI_called = true;
-	instr_until_set_IME = 1;
+	instr_executed_after_EI_called = false;
 }
 
 
@@ -955,7 +955,6 @@ void CPU::HALT() // HALT    len: 4t
 	else
 	{ // HALT is not entered, causing a bug where the CPU fails to increase PC when executing the next instruction
 		halt_bug = true;
-		WaitCycle();
 	}
 }
 
@@ -1084,10 +1083,16 @@ void CPU::Run()
 		instr_t instr = instr_table[opcode];
 		std::invoke(instr, this);
 
-		if (EI_called && instr_until_set_IME-- == 0)
+		// If the previous instruction was EI, the IME flag is set only after the instruction after the EI has been executed
+		if (EI_called)
 		{
-			IME = 1;
-			EI_called = false;
+			if (instr_executed_after_EI_called)
+			{
+				IME = 1;
+				EI_called = false;
+			}
+			else
+				instr_executed_after_EI_called = true;
 		}
 	}
 }
@@ -1130,14 +1135,14 @@ void CPU::CheckInterrupts()
 			return;
 		}
 	}
-	else if (in_halt_mode)
+	if (in_halt_mode)
 	{ // check if HALT mode should be exited, which is when enabled interrupt is requested
 		if ((*IF & *IE & 0x1F) != 0)
 		{
 			in_halt_mode = false;
 		}
+		WaitCycle();
 	}
-	WaitCycle();
 }
 
 
@@ -1188,7 +1193,7 @@ void CPU::State(Serialization::BaseFunctor& functor)
 	functor.fun(&EI_called, sizeof(bool));
 	functor.fun(&halt_bug, sizeof(bool));
 	functor.fun(&IME, sizeof(bool));
+	functor.fun(&instr_executed_after_EI_called, sizeof(bool));
 
-	functor.fun(&instr_until_set_IME, sizeof(unsigned));
 	functor.fun(&speed_switch_m_cycles_remaining, sizeof(unsigned));
 }

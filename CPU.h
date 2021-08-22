@@ -24,9 +24,9 @@ public:
 	Bus* bus;
 
 	bool in_halt_mode = false;
+	bool in_stop_mode = false;
 	bool HDMA_transfer_active = false; // refers to either HDMA or GDMA. During this time, the CPU is stopped
 	bool speed_switch_active = false;
-	bool in_stop_mode = false;
 
 	void Initialize();
 	void Reset(bool execute_boot_rom);
@@ -55,8 +55,8 @@ private:
 	bool EI_called = false;
 	bool halt_bug = false;
 	bool IME = false;
+	bool instr_executed_after_EI_called = false;
 
-	unsigned instr_until_set_IME = 0;
 	unsigned speed_switch_m_cycles_remaining = 0;
 
 	u8 opcode; // opcode of instruction currently being executed
