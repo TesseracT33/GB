@@ -246,14 +246,6 @@ void PPU::SetLCDCFlags()
 {
 	BG_enabled = BG_master_priority = CheckBit(LCDC, 0);
 	sprites_enabled = CheckBit(LCDC, 1);
-	if (!sprites_enabled)
-	{
-		int a = 3;
-	}
-	else
-	{
-		int a = 3;
-	}
 	sprite_height = CheckBit(LCDC, 2) ? 16 : 8;
 	addr_BG_tile_map = CheckBit(LCDC, 3) ? 0x9C00 : 0x9800;
 	addr_tile_data = CheckBit(LCDC, 4) ? 0x8000 : 0x9000;
@@ -395,15 +387,6 @@ void PPU::FetchSprite()
 	{
 	case TileFetchStep::TileNum:
 	{
-		if (*LY == 0x68 - 16 && pixel_shifter.x_pos == 0x40 - 8)
-		{
-			int a = 3;
-		}
-		if (*LY == 0x69 - 16 && pixel_shifter.x_pos == 0x40 - 8)
-		{
-			int a = 3;
-		}
-
 		if (!sprite_tile_fetcher.sprite.y_size_16)
 		{
 			tile_num = sprite_tile_fetcher.sprite.tile_num;
@@ -431,15 +414,6 @@ void PPU::FetchSprite()
 
 	case TileFetchStep::TileDataLow:
 	{
-		if (*LY == 0x68 - 16 && pixel_shifter.x_pos == 0x40 - 8)
-		{
-			int a = 3;
-		}
-		if (*LY == 0x69 - 16 && pixel_shifter.x_pos == 0x40 - 8)
-		{
-			int a = 3;
-		}
-
 		tile_addr = 0x8000 + 16 * tile_num;
 		if (!sprite_tile_fetcher.sprite.y_flip)
 			tile_addr += 2 * ((*LY - sprite_tile_fetcher.sprite.y_pos + 16) % 8);
@@ -455,15 +429,6 @@ void PPU::FetchSprite()
 
 	case TileFetchStep::TileDataHigh:
 	{
-		if (*LY == 0x68 - 16 && pixel_shifter.x_pos >= 0x40 - 8)
-		{
-			int a = 3;
-		}
-		if (*LY == 0x69 - 16 && pixel_shifter.x_pos == 0x40 - 8)
-		{
-			int a = 3;
-		}
-
 		tile_data_high = bus->Read(tile_addr + 1, true);
 		sprite_tile_fetcher.step = TileFetchStep::PushTile;
 		sprite_tile_fetcher.t_cycles_until_update = 1;
@@ -582,15 +547,6 @@ void PPU::ShiftPixel()
 	else
 	{
 		Pixel& sprite_pixel = sprite_FIFO.front();
-
-		if (*LY == 0x68 - 16 && pixel_shifter.x_pos == 0x40 - 8)
-		{
-			int a = 3;
-		}
-		if (*LY == 0x69 - 16 && pixel_shifter.x_pos == 0x40 - 8)
-		{
-			int a = 3;
-		}
 
 		// During a speed switch, if the switch was started during HBlank or VBlank, then the ppu cannot access vram during this time.
 		// The result is "black pixels" being pushed (https://gbdev.io/pandocs/CGB_Registers.html). 
