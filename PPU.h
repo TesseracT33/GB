@@ -58,7 +58,7 @@ public:
 	bool can_access_OAM = true;
 
 
-	
+
 private:
 	enum LCDStatus { HBlank, VBlank, Search_OAM_RAM, Driver_transfer };
 
@@ -199,7 +199,7 @@ private:
 	bool STAT_cond_met_LY_LYC = false;
 	bool STAT_cond_met_LCD_mode = false;
 	bool tile_data_signed = false;
-	
+
 	u8 leftmost_pixels_to_ignore;
 	u8 framebuffer[framebuffer_arr_size]{};
 
@@ -249,6 +249,6 @@ private:
 	u8 OBP_reg[64]{};
 
 	// actual colours resulting from the above palette memory. 8 palettes of 4 colours each.
-	SDL_Color BGP_GBC[32]{}; 
+	SDL_Color BGP_GBC[32]{};
 	SDL_Color OBP_GBC[32]{};
 };

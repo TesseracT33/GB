@@ -187,6 +187,7 @@ void PPU::DisableLCD()
 {
 	LCD_enabled = false;
 	ClearBit(LCDC, 7);
+	STAT_cond_met_LY_LYC = STAT_cond_met_LCD_mode = false;
 	SetScreenMode(LCDStatus::HBlank);
 	*LY = t_cycle_counter = 0;
 
@@ -200,16 +201,13 @@ void PPU::EnableLCD()
 {
 	LCD_enabled = true;
 	SetBit(LCDC, 7);
+	CheckSTATInterrupt();
 }
 
 
 void PPU::CheckSTATInterrupt()
 {
-	if (!LCD_enabled)
-	{
-		STAT_cond_met_LY_LYC = STAT_cond_met_LCD_mode = false;
-		return;
-	}
+	if (!LCD_enabled) return;
 
 	bool STAT_LY_EQUALS_LYC = *LY == *LYC;
 	STAT_LY_EQUALS_LYC ? SetBit(STAT, 2) : ClearBit(STAT, 2);
@@ -248,6 +246,14 @@ void PPU::SetLCDCFlags()
 {
 	BG_enabled = BG_master_priority = CheckBit(LCDC, 0);
 	sprites_enabled = CheckBit(LCDC, 1);
+	if (!sprites_enabled)
+	{
+		int a = 3;
+	}
+	else
+	{
+		int a = 3;
+	}
 	sprite_height = CheckBit(LCDC, 2) ? 16 : 8;
 	addr_BG_tile_map = CheckBit(LCDC, 3) ? 0x9C00 : 0x9800;
 	addr_tile_data = CheckBit(LCDC, 4) ? 0x8000 : 0x9000;
@@ -389,6 +395,15 @@ void PPU::FetchSprite()
 	{
 	case TileFetchStep::TileNum:
 	{
+		if (*LY == 0x68 - 16 && pixel_shifter.x_pos == 0x40 - 8)
+		{
+			int a = 3;
+		}
+		if (*LY == 0x69 - 16 && pixel_shifter.x_pos == 0x40 - 8)
+		{
+			int a = 3;
+		}
+
 		if (!sprite_tile_fetcher.sprite.y_size_16)
 		{
 			tile_num = sprite_tile_fetcher.sprite.tile_num;
@@ -416,9 +431,18 @@ void PPU::FetchSprite()
 
 	case TileFetchStep::TileDataLow:
 	{
+		if (*LY == 0x68 - 16 && pixel_shifter.x_pos == 0x40 - 8)
+		{
+			int a = 3;
+		}
+		if (*LY == 0x69 - 16 && pixel_shifter.x_pos == 0x40 - 8)
+		{
+			int a = 3;
+		}
+
 		tile_addr = 0x8000 + 16 * tile_num;
 		if (!sprite_tile_fetcher.sprite.y_flip)
-			tile_addr += 2 * (    (*LY - sprite_tile_fetcher.sprite.y_pos + 16) % 8);
+			tile_addr += 2 * ((*LY - sprite_tile_fetcher.sprite.y_pos + 16) % 8);
 		else
 			tile_addr += 2 * (7 - (*LY - sprite_tile_fetcher.sprite.y_pos + 16) % 8);
 
@@ -431,6 +455,15 @@ void PPU::FetchSprite()
 
 	case TileFetchStep::TileDataHigh:
 	{
+		if (*LY == 0x68 - 16 && pixel_shifter.x_pos >= 0x40 - 8)
+		{
+			int a = 3;
+		}
+		if (*LY == 0x69 - 16 && pixel_shifter.x_pos == 0x40 - 8)
+		{
+			int a = 3;
+		}
+
 		tile_data_high = bus->Read(tile_addr + 1, true);
 		sprite_tile_fetcher.step = TileFetchStep::PushTile;
 		sprite_tile_fetcher.t_cycles_until_update = 1;
@@ -550,6 +583,15 @@ void PPU::ShiftPixel()
 	{
 		Pixel& sprite_pixel = sprite_FIFO.front();
 
+		if (*LY == 0x68 - 16 && pixel_shifter.x_pos == 0x40 - 8)
+		{
+			int a = 3;
+		}
+		if (*LY == 0x69 - 16 && pixel_shifter.x_pos == 0x40 - 8)
+		{
+			int a = 3;
+		}
+
 		// During a speed switch, if the switch was started during HBlank or VBlank, then the ppu cannot access vram during this time.
 		// The result is "black pixels" being pushed (https://gbdev.io/pandocs/CGB_Registers.html). 
 		// todo: emulate this better? Currently, a black pixel is pushed only if the speed switch is active during the same t-cycle as the ppu shifts pixels
@@ -579,7 +621,7 @@ void PPU::ShiftPixel()
 
 void PPU::PushPixel(SDL_Color& col)
 {
-	framebuffer[framebuffer_pos    ] = col.r;
+	framebuffer[framebuffer_pos] = col.r;
 	framebuffer[framebuffer_pos + 1] = col.g;
 	framebuffer[framebuffer_pos + 2] = col.b;
 	framebuffer_pos += 3;
@@ -723,14 +765,14 @@ void PPU::Set_CGB_Colour(u8 index, u8 data, bool BGP)
 {
 	auto GetSDLColFromPaletteData = [&](u16 data)
 	{
-		u8 red   =  data        & 0x1F;
-		u8 green = (data >>  5) & 0x1F;
-		u8 blue  = (data >> 10) & 0x1F;
+		u8 red = data & 0x1F;
+		u8 green = (data >> 5) & 0x1F;
+		u8 blue = (data >> 10) & 0x1F;
 
 		// convert each 5-bit channel to 8-bit channels (https://github.com/mattcurrie/dmg-acid2)
-		red   = (red   << 3) | (red   >> 2);
+		red = (red << 3) | (red >> 2);
 		green = (green << 3) | (green >> 2);
-		blue  = (blue  << 3) | (blue  >> 2);
+		blue = (blue << 3) | (blue >> 2);
 
 		return SDL_Color{ red, green, blue, 0 };
 	};
