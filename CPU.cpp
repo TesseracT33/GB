@@ -789,6 +789,15 @@ void CPU::SWAP() // SWAP r8    len: 8t if r8 != (HL), otherwise 16t (prefixed in
 void CPU::CB() // CB <instr>
 {
 	opcode = Read_u8();
+
+	#ifdef DEBUG
+		char buf[200]{};
+		sprintf(buf, "#%i\tPC: %04X\tOP: ~%02X\tSP: %04X\tAF: %04X\tBC: %04X\tDE: %04X\tHL: %04X\tIME: %i\tIE: %02X\tIF: %02X\tLCDC: %02X\tSTAT: %02X\tLY: %02X\tROM: %04X",
+			instruction_counter++, (int)PC, (int)opcode, (int)SP, (int)AF, (int)BC, (int)DE, (int)HL, (int)IME,
+			(int)bus->Read(Bus::Addr::IE), (int)bus->Read(Bus::Addr::IF), (int)bus->Read(Bus::Addr::LCDC), (int)bus->Read(Bus::Addr::STAT), (int)bus->Read(Bus::Addr::LY), (int)bus->GetCurrentRomBank());
+		ofs << buf << std::endl;
+	#endif
+
 	switch (opcode / 8)
 	{
 	case 0: RLC(); break;
@@ -1067,11 +1076,11 @@ void CPU::Run()
 		opcode = bus->ReadCycle(PC);
 
 		#ifdef DEBUG
-				char buf[200]{};
-				sprintf(buf, "#%i\tPC: %04X\tOP: %02X\tSP: %04X\tAF: %04X\tBC: %04X\tDE: %04X\tHL: %04X\tIME: %i\tIE: %02X\tIF: %02X\tLCDC: %02X\tSTAT: %02X\tLY: %02X\tROM: %04X",
-					instruction_counter++, (int)PC, (int)opcode, (int)SP, (int)AF, (int)BC, (int)DE, (int)HL, (int)IME,
-					(int)bus->Read(Bus::Addr::IE), (int)bus->Read(Bus::Addr::IF), (int)bus->Read(Bus::Addr::LCDC), (int)bus->Read(Bus::Addr::STAT), (int)bus->Read(Bus::Addr::LY), (int)bus->GetCurrentRomBank());
-				ofs << buf << std::endl;
+			char buf[200]{};
+			sprintf(buf, "#%i\tPC: %04X\tOP: %02X\tSP: %04X\tAF: %04X\tBC: %04X\tDE: %04X\tHL: %04X\tIME: %i\tIE: %02X\tIF: %02X\tLCDC: %02X\tSTAT: %02X\tLY: %02X\tROM: %04X",
+				instruction_counter++, (int)PC, (int)opcode, (int)SP, (int)AF, (int)BC, (int)DE, (int)HL, (int)IME,
+				(int)bus->Read(Bus::Addr::IE), (int)bus->Read(Bus::Addr::IF), (int)bus->Read(Bus::Addr::LCDC), (int)bus->Read(Bus::Addr::STAT), (int)bus->Read(Bus::Addr::LY), (int)bus->GetCurrentRomBank());
+			ofs << buf << std::endl;
 		#endif
 
 		// If the previous instruction was HALT, there is a hardware bug in which PC is not incremented after the current instruction
