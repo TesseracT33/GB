@@ -301,6 +301,10 @@ System::Mode Cartridge::LoadCartridge(const char* path)
 	bool supported_ram_size_detected = DetectRAMSize();
 	if (!supported_ram_size_detected) return System::Mode::NONE;
 
+	// if a cartridge claims to have external ram, but that its size is 0, do not let it use external ram
+	if (external_RAM_available && num_RAM_banks == 0)
+		external_RAM_available = false;
+
 	bool valid_rom_size_detected = DetectROMSize();
 	if (!valid_rom_size_detected) return System::Mode::NONE;
 
