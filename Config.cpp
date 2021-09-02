@@ -17,7 +17,7 @@ bool Config::ConfigFileExists()
 
 void Config::Save()
 {
-	std::ofstream ofs(config_file_path.mb_str(), std::ofstream::out | std::fstream::trunc);
+	std::ofstream ofs(config_file_path.mb_str(), std::ofstream::out | std::ofstream::binary);
 	if (!ofs) // if the file could not be created
 	{
 		wxMessageBox("Config file could not be created or saved.");
@@ -36,7 +36,7 @@ void Config::Save()
 
 void Config::Load()
 {
-	std::ifstream ifs(config_file_path.mb_str(), std::ifstream::in);
+	std::ifstream ifs(config_file_path.mb_str(), std::ifstream::in | std::ofstream::binary);
 	if (!ifs) // if the file could not be opened
 	{
 		wxMessageBox("Config file could not be opened. Reverting to defaults.");
