@@ -201,7 +201,7 @@ void Emulator::LoadState()
 		return;
 	}
 
-	std::ifstream ifs(save_state_path, std::ifstream::in | std::ofstream::binary);
+	std::ifstream ifs(save_state_path, std::ifstream::in | std::ifstream::binary);
 	if (!ifs)
 	{
 		wxMessageBox("Save state does not exist or could not be opened.");

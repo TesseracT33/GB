@@ -36,7 +36,7 @@ void Config::Save()
 
 void Config::Load()
 {
-	std::ifstream ifs(config_file_path.mb_str(), std::ifstream::in | std::ofstream::binary);
+	std::ifstream ifs(config_file_path.mb_str(), std::ifstream::in | std::ifstream::binary);
 	if (!ifs) // if the file could not be opened
 	{
 		wxMessageBox("Config file could not be opened. Reverting to defaults.");
