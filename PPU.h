@@ -84,7 +84,7 @@ private:
 	struct Sprite
 	{
 		u8 tile_num = 0, y_pos = 0, x_pos = 0, palette = 0;
-		bool bg_priority = 0, y_flip = 0, x_flip = 0, y_size_16 = 0;
+		bool bg_priority = 0, y_flip = 0, x_flip = 0;
 
 		// CBG-specific
 		bool VRAM_bank = 0;
@@ -93,9 +93,9 @@ private:
 		Sprite() = default;
 
 		// The two last arguments are only supplied for CGB sprites
-		Sprite(u8 _tile_num, u8 _y_pos, u8 _x_pos, u8 _palette, bool _bg_priority, bool _y_flip, bool _x_flip, bool _y_size_16, bool _VRAM_bank = 0, int _OAM_index = 0)
+		Sprite(u8 _tile_num, u8 _y_pos, u8 _x_pos, u8 _palette, bool _bg_priority, bool _y_flip, bool _x_flip, bool _VRAM_bank = 0, int _OAM_index = 0)
 			: tile_num(_tile_num), y_pos(_y_pos), x_pos(_x_pos), palette(_palette), bg_priority(_bg_priority), y_flip(_y_flip),
-			x_flip(_x_flip), y_size_16(_y_size_16), VRAM_bank(_VRAM_bank), OAM_index(_OAM_index) {}
+			x_flip(_x_flip), VRAM_bank(_VRAM_bank), OAM_index(_OAM_index) {}
 	};
 
 	enum class TileFetchStep { TileNum, TileDataLow, TileDataHigh, PushTile };

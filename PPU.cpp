@@ -212,14 +212,14 @@ void PPU::CheckSTATInterrupt()
 
 	bool STAT_LY_EQUALS_LYC = *LY == *LYC;
 	STAT_LY_EQUALS_LYC ? SetBit(STAT, 2) : ClearBit(STAT, 2);
-	bool STAT_ENABLE_LYC_COMPARE = CheckBit(STAT, 6);
+	bool STAT_ENABLE_LYC_COMPARE = *STAT & 0x40;
 	bool prev_STAT_cond_met_LY_LYC = STAT_cond_met_LY_LYC;
 	STAT_cond_met_LY_LYC = STAT_LY_EQUALS_LYC && STAT_ENABLE_LYC_COMPARE;
 
 	u8 LCD_mode = *STAT & 3;
-	bool STAT_ENABLE_HBL = CheckBit(STAT, 3);
-	bool STAT_ENABLE_VBL = CheckBit(STAT, 4);
-	bool STAT_ENABLE_OAM = CheckBit(STAT, 5);
+	bool STAT_ENABLE_HBL = *STAT & 0x08;
+	bool STAT_ENABLE_VBL = *STAT & 0x10;
+	bool STAT_ENABLE_OAM = *STAT & 0x20;
 	bool prev_STAT_cond_met_LCD_mode = STAT_cond_met_LCD_mode;
 	STAT_cond_met_LCD_mode = LCD_mode == 0 && STAT_ENABLE_HBL ||
 		LCD_mode == 1 && (STAT_ENABLE_VBL || STAT_ENABLE_OAM) || LCD_mode == 2 && STAT_ENABLE_OAM;
@@ -388,11 +388,11 @@ void PPU::FetchSprite()
 	{
 	case TileFetchStep::TileNum:
 	{
-		if (!sprite_tile_fetcher.sprite.y_size_16)
+		if (sprite_height == 8)
 		{
 			tile_num = sprite_tile_fetcher.sprite.tile_num;
 		}
-		else
+		else // == 16
 		{
 			// if 8x16 sprites are used, find if low or high tile is used for the current scanline
 			// To calculate the tile number of the top tile, the tile number in the OAM entry is used and the least significant bit is set to 0. 
@@ -556,7 +556,7 @@ void PPU::ShiftPixel()
 			col = color_black;
 		else if (System::mode == System::Mode::CGB && BG_master_priority || !BG_enabled && System::mode != System::Mode::CGB)
 			col = GetColourFromPixel(sprite_pixel, TileType::OBJ);
-		else if (!sprites_enabled || sprite_pixel.col_id == 0 || sprite_pixel.bg_priority && bg_pixel.col_id != 0)
+		else if (sprite_pixel.col_id == 0 || sprite_pixel.bg_priority && bg_pixel.col_id != 0)
 			col = GetColourFromPixel(bg_pixel, TileType::BG);
 		else
 			col = GetColourFromPixel(sprite_pixel, TileType::OBJ);
@@ -604,24 +604,23 @@ void PPU::SearchOAMForSprite()
 		if (x_pos > 0)
 		{
 			u8 tile_num = bus->Read(OAM_sprite_addr + 2, true);
-			u8 flags = bus->Read(OAM_sprite_addr + 3, true);
+			u8 attributes = bus->Read(OAM_sprite_addr + 3, true);
 
-			bool x_flip = CheckBit(flags, 5);
-			bool y_flip = CheckBit(flags, 6);
-			bool bg_priority = CheckBit(flags, 7);
-			bool y_size_16 = sprite_height == 16;
+			bool x_flip = CheckBit(attributes, 5);
+			bool y_flip = CheckBit(attributes, 6);
+			bool bg_priority = CheckBit(attributes, 7);
 
-			if (System::mode != System::Mode::CGB)
+			if (System::mode == System::Mode::DMG)
 			{
-				u8 palette = CheckBit(flags, 4);
-				sprite_buffer.emplace_back(tile_num, y_pos, x_pos, palette, bg_priority, y_flip, x_flip, y_size_16);
+				u8 palette = CheckBit(attributes, 4);
+				sprite_buffer.emplace_back(tile_num, y_pos, x_pos, palette, bg_priority, y_flip, x_flip);
 			}
 			else
 			{
-				u8 palette = flags & 7;
-				bool VRAM_bank = CheckBit(flags, 3); // todo: how does this dictate which bank is used? isn't this set by writing to VBK?
+				u8 palette = attributes & 7;
+				bool VRAM_bank = CheckBit(attributes, 3); // todo: how does this dictate which bank is used? isn't this set by writing to VBK?
 				int OAM_index = 0.25 * (OAM_sprite_addr - Bus::Addr::OAM_START);
-				sprite_buffer.emplace_back(tile_num, y_pos, x_pos, palette, bg_priority, y_flip, x_flip, y_size_16, VRAM_bank, OAM_index);
+				sprite_buffer.emplace_back(tile_num, y_pos, x_pos, palette, bg_priority, y_flip, x_flip, VRAM_bank, OAM_index);
 			}
 		}
 	}
