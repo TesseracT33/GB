@@ -106,6 +106,7 @@ void PPU::Update()
 	if (!LCD_enabled) return;
 
 	// 456 t-cycles per scanline in single-speed mode. for double-speed, all numbers should be doubled
+	// 154 scanlines in total (LY == current scanline). Only scanlines 0-143 are visible.
 
 	// the following t_cycle_counter comparisons can only be true at the beginning of an m-cycle, so this can exist outside of the for-loop
 	if (*LY < 144)
@@ -135,7 +136,7 @@ void PPU::Update()
 			if (t_cycle_counter < 80 * System::speed_mode)
 			{
 				if (t_cycle_counter % OAM_check_interval == 0 && sprite_buffer.size() < 10 && can_access_OAM)
-					Search_OAM_for_Sprites();
+					SearchOAMForSprite();
 			}
 			else if (pixel_shifter.x_pos < resolution_x)
 			{
@@ -269,13 +270,13 @@ void PPU::SetDisplayScale(unsigned scale)
 
 SDL_Color PPU::GetColourFromPixel(Pixel& pixel, TileType object_type) const
 {
-	if (System::mode != System::Mode::CGB)
+	if (System::mode == System::Mode::DMG)
 	{
 		// which bits of the colour palette does the colour id map to?
 		u8 shift = pixel.col_id * 2;
 		u8 col_index;
-		if (object_type == TileType::BG) col_index = (*BGP & 3 << shift) >> shift;
-		else                             col_index = (*OBP[pixel.palette & 1] & 3 << shift) >> shift;
+		if (object_type == TileType::BG) col_index = *BGP >> shift & 3;
+		else                             col_index = *OBP[pixel.palette & 1] >> shift & 3;
 		return GB_palette[col_index];
 	}
 	else
@@ -441,7 +442,7 @@ void PPU::FetchSprite()
 		// e.g., if pixel shifter xPos = 0, then a sprite with an X-value of 8 would have all 8 pixels loaded, 
 		// while a sprite with an X-value of 7 would only have the rightmost 7 pixels loaded
 		// No need to worry about pixels going off the right side of the screen, since the PPU wouldn't push these pixels anyways
-		int pixels_to_ignore_left = std::max(0, 8 - sprite_tile_fetcher.sprite.x_pos + pixel_shifter.x_pos);
+		size_t pixels_to_ignore_left = std::max(0, 8 - sprite_tile_fetcher.sprite.x_pos + pixel_shifter.x_pos);
 
 		if (obj_priority_mode == OBJ_Priority_Mode::OAM_index)
 		{
@@ -453,7 +454,7 @@ void PPU::FetchSprite()
 		// if FIFO already contains n no. of pixels, insert only the last 8 - n pixels from the current sprite
 		if (!sprite_tile_fetcher.sprite.x_flip)
 		{
-			for (int i = 7 - std::max((int)sprite_FIFO.size(), pixels_to_ignore_left); i >= 0; i--)
+			for (int i = 7 - std::max(sprite_FIFO.size(), pixels_to_ignore_left); i >= 0; i--)
 			{
 				u8 col_id = CheckBit(tile_data_high, i) << 1 | CheckBit(tile_data_low, i);
 				sprite_FIFO.emplace(col_id, sprite_tile_fetcher.sprite.palette, sprite_tile_fetcher.sprite.bg_priority);
@@ -461,7 +462,7 @@ void PPU::FetchSprite()
 		}
 		else
 		{
-			for (int i = std::max((int)sprite_FIFO.size(), pixels_to_ignore_left); i <= 7; i++)
+			for (int i = std::max(sprite_FIFO.size(), pixels_to_ignore_left); i <= 7; i++)
 			{
 				u8 col_id = CheckBit(tile_data_high, i) << 1 | CheckBit(tile_data_low, i);
 				sprite_FIFO.emplace(col_id, sprite_tile_fetcher.sprite.palette, sprite_tile_fetcher.sprite.bg_priority);
@@ -537,7 +538,7 @@ void PPU::ShiftPixel()
 
 	Pixel& bg_pixel = background_FIFO.front();
 
-	if (!BG_enabled && System::mode != System::Mode::CGB)
+	if (!BG_enabled && System::mode == System::Mode::DMG)
 		bg_pixel.col_id = 0;
 
 	if (sprite_FIFO.empty())
@@ -577,7 +578,7 @@ void PPU::ShiftPixel()
 
 void PPU::PushPixel(SDL_Color& col)
 {
-	framebuffer[framebuffer_pos] = col.r;
+	framebuffer[framebuffer_pos    ] = col.r;
 	framebuffer[framebuffer_pos + 1] = col.g;
 	framebuffer[framebuffer_pos + 2] = col.b;
 	framebuffer_pos += 3;
@@ -593,7 +594,7 @@ void PPU::PushPixel(SDL_Color& col)
 
 
 // 2 t-cycles per sprite and function call
-void PPU::Search_OAM_for_Sprites()
+void PPU::SearchOAMForSprite()
 {
 	u8 y_pos = bus->Read(OAM_sprite_addr, true);
 
@@ -654,7 +655,7 @@ void PPU::UpdatePixelFetchers()
 			else
 				sprite_tile_fetcher.t_cycles_until_update--;
 		}
-		else
+		else if (sprites_enabled)
 		{
 			TryToInitiateSpriteFetch();
 		}

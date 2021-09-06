@@ -127,7 +127,7 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access, bool apu_access)
 			if (prev_select == new_select) return;
 
 			// only bits 4-5 are writable
-			IO(P1) = (IO(P1) & 0xF) | new_select;
+			IO(P1) = IO(P1) & 0xF | new_select;
 
 			// update bits 0-3 of P1. These are not writeable, but can be changed if bits 4-5 are changed, if a button is also currently held
 			joypad->UpdateP1OutputLines();
@@ -149,7 +149,7 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access, bool apu_access)
 		case Addr::TAC: // 0xFF07
 			IO(TAC) = data;
 			timer->SetTIMAFreq(data & 3);
-			timer->TIMA_enabled = CheckBit(data, 2);
+			timer->TIMA_enabled = data & 4;
 			break;
 
 		case Addr::NR10:
@@ -213,7 +213,7 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access, bool apu_access)
 		case Addr::LCDC: // 0xFF40
 		{
 			IO(LCDC) = data;
-			bool enable_LCD = CheckBit(data, 7);
+			bool enable_LCD = data & 0x80;
 			if (enable_LCD && !ppu->LCD_enabled)
 				ppu->EnableLCD();
 			else if (!enable_LCD && ppu->LCD_enabled)
@@ -224,8 +224,7 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access, bool apu_access)
 
 		case Addr::STAT: // 0xFF41
 			// only bits 3-6 are writable
-			IO(STAT) &= ~(0xF << 3);
-			IO(STAT) |= data & 0xF << 3;
+			IO(STAT) = IO(STAT) & ~0x78 | data & 0x78;
 			ppu->CheckSTATInterrupt();
 			break;
 
@@ -254,8 +253,7 @@ void BusImpl::Write(u16 addr, u8 data, bool ppu_access, bool apu_access)
 			// bit 7 is read only. also, only bits 0 and 7 are used
 			if (System::mode == System::Mode::CGB)
 			{
-				IO(KEY1) &= 0xFE;
-				IO(KEY1) |= data & 1;
+				IO(KEY1) = IO(KEY1) & 0xFE | data & 1;
 			}
 			break;
 
@@ -520,33 +518,15 @@ u8 BusImpl::Read(u16 addr, bool ppu_access, bool apu_access)
 		case Addr::NR52: // 0xFF26
 			return IO(NR52) | 0x70; // bits 4-6 always return 1
 
-		case 0xFF27:
-		case 0xFF28:
-		case 0xFF29:
-		case 0xFF2A:
-		case 0xFF2B:
-		case 0xFF2C:
-		case 0xFF2D:
-		case 0xFF2E:
-		case 0xFF2F:
+		case 0xFF27: case 0xFF28: case 0xFF29: case 0xFF2A: case 0xFF2B:
+		case 0xFF2C: case 0xFF2D: case 0xFF2E: case 0xFF2F:
 			return 0xFF; // does not exist
 
-		case 0xFF30: // wave ram (0xFF30-0xFF3E)
-		case 0xFF31:
-		case 0xFF32:
-		case 0xFF33:
-		case 0xFF34:
-		case 0xFF35:
-		case 0xFF36:
-		case 0xFF37:
-		case 0xFF38:
-		case 0xFF39:
-		case 0xFF3A:
-		case 0xFF3B:
-		case 0xFF3C:
-		case 0xFF3D:
-		case 0xFF3E:
-		case 0xFF3F:
+		// wave ram (0xFF30-0xFF3E)
+		case 0xFF30: case 0xFF31: case 0xFF32: case 0xFF33: 
+		case 0xFF34: case 0xFF35: case 0xFF36: case 0xFF37: 
+		case 0xFF38: case 0xFF39: case 0xFF3A: case 0xFF3B:
+		case 0xFF3C: case 0xFF3D: case 0xFF3E: case 0xFF3F:
 			if (!apu_access)
 				return apu->ReadFromWaveRam(addr);
 			return IO(addr);
@@ -557,7 +537,7 @@ u8 BusImpl::Read(u16 addr, bool ppu_access, bool apu_access)
 		case Addr::KEY1: // 0xFF4D
 			// bits 1-6 always return 1. in DMG mode, always return 0xFF
 			if (System::mode == System::Mode::DMG) return 0xFF;
-			return IO(KEY1) | 0x3F << 1;
+			return IO(KEY1) | 0x7E;
 
 		case Addr::VBK: // 0xFF4F
 			// select the VRAM bank mapped to 8000h - 9FFFh

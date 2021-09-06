@@ -235,7 +235,7 @@ private:
 	void FetchSprite();
 	void ResetGraphics();
 	void PushPixel(SDL_Color& col);
-	void Search_OAM_for_Sprites();
+	void SearchOAMForSprite();
 	void SetDisplayScale(unsigned scale);
 	void ShiftPixel();
 	void TryToInitiateSpriteFetch();
