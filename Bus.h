@@ -97,24 +97,20 @@ public:
 		IE        = 0xFFFF
 	};
 
+	virtual void ExitSpeedSwitch() = 0;
+	virtual u16  GetCurrentRomBank() = 0; // helper function for debugging
+	virtual void InitiateSpeedSwitch() = 0;
 	virtual bool LoadBootRom(const std::string& boot_path) = 0;
 	virtual void Write(u16 addr, u8 data, bool ppu_access = false, bool apu_access = false) = 0;
 	virtual u8   Read(u16 addr, bool ppu_access = false, bool apu_access = false) = 0;
 	virtual u8*  ReadIOPointer(u16 addr) = 0;
 	virtual void Reset(bool execute_boot_rom) = 0;
+	virtual void ResetDIV() = 0; // out-of-place, but it is to get around circular dependencies between CPU and Timer
 
+	// Read/write and advance the gb state machine by any one or more cycles. Only the CPU uses these functions
 	virtual u8 ReadCycle(u16 addr) = 0;
 	virtual void WriteCycle(u16 addr, u8 data) = 0;
 	virtual void WaitCycle(const unsigned cycles = 1) = 0;
-
-	virtual void InitiateSpeedSwitch() = 0;
-	virtual void ExitSpeedSwitch() = 0;
-
-	// out-of-place, but it is to get around circular dependencies between CPU and Timer
-	virtual void ResetDIV() = 0;
-
-	// helper function for debugging
-	virtual u16 GetCurrentRomBank() = 0;
 
 	unsigned m_cycle_counter = 0;
 };

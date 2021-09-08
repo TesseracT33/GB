@@ -34,7 +34,6 @@ public:
 	int  GetWindowWidth() { return resolution_x * scale; };
 	int  GetWindowHeight() { return resolution_y * scale; };
 	void Initialize();
-	void RenderGraphics();
 	void Reset();
 	void SetColour(int id, SDL_Color color);
 	void SetLCDCFlags();
@@ -111,8 +110,6 @@ private:
 		bool step_3_completed_on_current_scanline = false;
 		int window_line_counter = -1; // set to 0 when window_reached is set to true during a scanline for the first time in a frame
 
-		unsigned leftmost_pixels_to_ignore;
-
 		void StartOver()
 		{
 			step = TileFetchStep::TileNum;;
@@ -164,14 +161,12 @@ private:
 	static const unsigned colour_channels = 3;
 	static const unsigned framebuffer_arr_size = resolution_x * resolution_y * colour_channels;
 
+	const unsigned default_scale = 6;
 	const unsigned t_cycles_per_scanline = 456;
 	const SDL_Color color_white = Themes::grayscale[0];
 	const SDL_Color color_light_grey = Themes::grayscale[1];
 	const SDL_Color color_dark_grey = Themes::grayscale[2];
 	const SDL_Color color_black = Themes::grayscale[3];
-
-	// config-related
-	const unsigned default_scale = 6;
 	const SDL_Color default_palette[4] = { color_white, color_light_grey, color_dark_grey, color_black };
 
 	u8* LCDC;
@@ -185,7 +180,7 @@ private:
 	u8* BGP;
 	u8* OBP[2]{}; // OBP0 and OBP1
 
-	// LCDC flags
+	// LCDC-flag-related
 	bool BG_enabled;
 	bool BG_master_priority;
 	bool sprites_enabled;
@@ -233,6 +228,7 @@ private:
 	void SetScreenMode(PPU::LCDStatus mode);
 	void FetchBackgroundTile();
 	void FetchSprite();
+	void RenderGraphics();
 	void ResetGraphics();
 	void PushPixel(SDL_Color& col);
 	void SearchOAMForSprite();

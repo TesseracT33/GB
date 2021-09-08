@@ -1,10 +1,5 @@
 #pragma once
 
-#include <wx/msgdlg.h>
-
-#include <fstream>
-#include <string>
-
 #include "Types.h"
 
 namespace Util
