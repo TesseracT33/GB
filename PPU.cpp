@@ -254,7 +254,7 @@ void PPU::SetLCDCFlags()
 	addr_window_tile_map = CheckBit(LCDC, 6) ? 0x9C00 : 0x9800;
 	LCD_enabled = CheckBit(LCDC, 7);
 
-	tile_data_signed = addr_tile_data == 0x9000;
+	tile_num_is_signed = addr_tile_data == 0x9000;
 }
 
 
@@ -268,21 +268,21 @@ void PPU::SetDisplayScale(unsigned scale)
 }
 
 
-SDL_Color PPU::GetColourFromPixel(Pixel& pixel, TileType object_type) const
+SDL_Color PPU::GetColourFromPixel(Pixel& pixel, TileType tile_type) const
 {
 	if (System::mode == System::Mode::DMG)
 	{
 		// which bits of the colour palette does the colour id map to?
 		u8 shift = pixel.col_id * 2;
 		u8 col_index;
-		if (object_type == TileType::BG) col_index = *BGP >> shift & 3;
-		else                             col_index = *OBP[pixel.palette & 1] >> shift & 3;
+		if (tile_type == TileType::BG) col_index = *BGP >> shift & 3;
+		else                           col_index = *OBP[pixel.palette & 1] >> shift & 3;
 		return GB_palette[col_index];
 	}
 	else
 	{
-		if (object_type == TileType::BG) return BGP_GBC[4 * pixel.palette + pixel.col_id];
-		else                             return OBP_GBC[4 * pixel.palette + pixel.col_id];
+		if (tile_type == TileType::BG) return BGP_GBC[4 * pixel.palette + pixel.col_id];
+		else                           return OBP_GBC[4 * pixel.palette + pixel.col_id];
 	}
 }
 
@@ -290,7 +290,7 @@ SDL_Color PPU::GetColourFromPixel(Pixel& pixel, TileType object_type) const
 void PPU::FetchBackgroundTile()
 {
 	static u8 tile_data_low, tile_data_high;
-	static u16 tile_addr;
+	static u16 tile_data_addr;
 	static s16 tile_num;
 
 	switch (bg_tile_fetcher.step)
@@ -314,7 +314,7 @@ void PPU::FetchBackgroundTile()
 		}
 		tile_num_addr += (32 * tile_row + tile_col) & 0x3FF;
 
-		tile_num = tile_data_signed ? (s8)bus->Read(tile_num_addr, true) : bus->Read(tile_num_addr, true);
+		tile_num = tile_num_is_signed ? (s8)bus->Read(tile_num_addr, true) : bus->Read(tile_num_addr, true);
 
 		bg_tile_fetcher.step = TileFetchStep::TileDataLow;
 		bg_tile_fetcher.t_cycles_until_update = 1;
@@ -323,13 +323,13 @@ void PPU::FetchBackgroundTile()
 
 	case TileFetchStep::TileDataLow:
 	{
-		tile_addr = addr_tile_data + tile_num * 16;
+		tile_data_addr = addr_tile_data + 16 * tile_num;
 		if (bg_tile_fetcher.window_reached)
-			tile_addr += 2 * (bg_tile_fetcher.window_line_counter % 8);
+			tile_data_addr += 2 * (bg_tile_fetcher.window_line_counter % 8);
 		else
-			tile_addr += 2 * ((*LY + *SCY) % 8);
+			tile_data_addr += 2 * ((*LY + *SCY) % 8);
 
-		tile_data_low = bus->Read(tile_addr, true);
+		tile_data_low = bus->Read(tile_data_addr, true);
 
 		bg_tile_fetcher.step = TileFetchStep::TileDataHigh;
 		bg_tile_fetcher.t_cycles_until_update = 1;
@@ -338,7 +338,7 @@ void PPU::FetchBackgroundTile()
 
 	case TileFetchStep::TileDataHigh:
 	{
-		tile_data_high = bus->Read(tile_addr + 1, true);
+		tile_data_high = bus->Read(tile_data_addr + 1, true);
 		bg_tile_fetcher.t_cycles_until_update = 1;
 		// The first time the background fetcher completes step 3 on a scanline, the status is fully reset and operation restarts at Step 1.
 		if (bg_tile_fetcher.step_3_completed_on_current_scanline)
@@ -813,7 +813,7 @@ void PPU::State(Serialization::BaseFunctor& functor)
 	functor.fun(&reset_graphics_after_render, sizeof(bool));
 	functor.fun(&STAT_cond_met_LY_LYC, sizeof(bool));
 	functor.fun(&STAT_cond_met_LCD_mode, sizeof(bool));
-	functor.fun(&tile_data_signed, sizeof(bool));
+	functor.fun(&tile_num_is_signed, sizeof(bool));
 
 	functor.fun(&leftmost_pixels_to_ignore, sizeof(u8));
 	functor.fun(framebuffer, std::size(framebuffer) * sizeof(u8));

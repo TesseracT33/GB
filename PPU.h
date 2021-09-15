@@ -193,7 +193,7 @@ private:
 	bool reset_graphics_after_render = false;
 	bool STAT_cond_met_LY_LYC = false;
 	bool STAT_cond_met_LCD_mode = false;
-	bool tile_data_signed = false;
+	bool tile_num_is_signed = false;
 
 	u8 leftmost_pixels_to_ignore;
 	u8 framebuffer[framebuffer_arr_size]{};
@@ -236,7 +236,7 @@ private:
 	void ShiftPixel();
 	void TryToInitiateSpriteFetch();
 	void UpdatePixelFetchers();
-	SDL_Color GetColourFromPixel(Pixel& pixel, TileType object_type) const;
+	SDL_Color GetColourFromPixel(Pixel& pixel, TileType tile_type) const;
 
 	/// GBC-specific
 
