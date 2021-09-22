@@ -176,7 +176,7 @@ void CPU::LD_HL_r8() // LD (HL), r8    len: 8t
 void CPU::LD_r8_u8() // LD r8, u8    len: 8t
 {
 	u8* op1 = GetOpDivPointer(0);
-	u8 op2 = Read_u8();
+	u8 op2 = Read8();
 	*op1 = op2;
 }
 
@@ -184,7 +184,7 @@ void CPU::LD_r8_u8() // LD r8, u8    len: 8t
 // Load u8 into (HL)
 void CPU::LD_HL_u8() // LD (HL), u8    len: 12t
 {
-	u8 op = Read_u8();
+	u8 op = Read8();
 	bus->WriteCycle(HL, op);
 }
 
@@ -192,7 +192,7 @@ void CPU::LD_HL_u8() // LD (HL), u8    len: 12t
 // Load u16 into r16
 void CPU::LD_r16_u16() // LD r16, u16    len: 12t
 {
-	u16 op = Read_u16();
+	u16 op = Read16();
 	switch (opcode)
 	{
 	case 0x01: B = op >> 8; C = op & 0xFF; return;
@@ -234,7 +234,7 @@ void CPU::LD_A_r16() // LD A, (r16)    len: 8t
 // Load A into the byte at address pointed to by u16
 void CPU::LD_u16_A() // LD (u16), A    len: 16t
 {
-	u16 addr = Read_u16();
+	u16 addr = Read16();
 	bus->WriteCycle(addr, A);
 }
 
@@ -242,7 +242,7 @@ void CPU::LD_u16_A() // LD (u16), A    len: 16t
 // Load the byte at address u16 into A
 void CPU::LD_A_u16() // LD A, (u16)    len: 16t
 {
-	u16 addr = Read_u16();
+	u16 addr = Read16();
 	A = bus->ReadCycle(addr);
 }
 
@@ -250,7 +250,7 @@ void CPU::LD_A_u16() // LD A, (u16)    len: 16t
 // Load SP & 0xFF into the byte at address u16 and SP >> 8 into the byte at address u16 + 1
 void CPU::LD_u16_SP() // LD (u16), SP    len: 20t
 {
-	u16 addr = Read_u16();
+	u16 addr = Read16();
 	bus->WriteCycle(addr, SP & 0xFF);
 	bus->WriteCycle(addr + 1, SP >> 8);
 }
@@ -259,7 +259,7 @@ void CPU::LD_u16_SP() // LD (u16), SP    len: 20t
 // Load SP+s8 into HL
 void CPU::LD_HL_SP_s8() // LD HL, SP + s8    len: 12t
 {
-	s8 offset = Read_s8();
+	s8 offset = Read8();
 	F_H = (SP & 0xF) + (offset & 0xF) > 0xF; // check if overflow from bit 3
 	F_C = (SP & 0xFF) + (offset & 0xFF) > 0xFF; // check if overflow from bit 7
 	u16 result = SP + offset;
@@ -309,14 +309,14 @@ void CPU::LD_A_HLm() // LD (HL-), A    len: 8t
 // Load A into the byte at address FF00+u8
 void CPU::LDH_u8_A() // LD (FF00+u8), A    len: 12t
 {
-	bus->WriteCycle(0xFF00 | Read_u8(), A);
+	bus->WriteCycle(0xFF00 | Read8(), A);
 }
 
 
 // Load the byte at address FF00+u8 into A
 void CPU::LDH_A_u8() // LD A, (FF00+u8)    len: 12t
 {
-	A = bus->ReadCycle(0xFF00 | Read_u8());
+	A = bus->ReadCycle(0xFF00 | Read8());
 }
 
 
@@ -337,50 +337,28 @@ void CPU::LDH_A_C() // LD A, (FF00+C)    len: 8t
 // Add r8 and carry flag to register A
 void CPU::ADC_r8() // ADC A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	u8 op = GetOpMod();
-	u16 delta = op + F_C;
-	F_N = 0;
-	F_H = (A & 0xF) + (op & 0xF) + F_C > 0xF; // check if overflow from bit 3
-	F_C = (A + delta > 0xFF); // check if overflow from bit 7
-	A += delta;
-	F_Z = A == 0;
+	ADC(GetOpMod());
 }
 
 
 // Add u8 and carry flag to register A
 void CPU::ADC_u8() // ADC A, u8    len: 8t
 {
-	u8 op = Read_u8();
-	u16 delta = op + F_C;
-	F_N = 0;
-	F_H = (A & 0xF) + (op & 0xF) + F_C > 0xF; // check if overflow from bit 3
-	F_C = (A + delta > 0xFF); // check if overflow from bit 7
-	A += delta;
-	F_Z = A == 0;
+	ADC(Read8());
 }
 
 
 // Add r8 to register A
 void CPU::ADD_A_r8() // ADD A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	u8 op = GetOpMod();
-	F_N = 0;
-	F_H = ((A & 0xF) + (op & 0xF) > 0xF); // check if overflow from bit 3
-	F_C = (A + op > 0xFF); // check if overflow from bit 7
-	A += op;
-	F_Z = A == 0;
+	ADD_A(GetOpMod());
 }
 
 
 // Add u8 to register A
 void CPU::ADD_A_u8() // ADD A, u8    len: 8t
 {
-	u8 op = Read_u8();
-	F_N = 0;
-	F_H = ((A & 0xF) + (op & 0xF) > 0xF); // check if overflow from bit 3
-	F_C = (A + op > 0xFF); // check if overflow from bit 7
-	A += op;
-	F_Z = A == 0;
+	ADD_A(Read8());
 }
 
 
@@ -408,7 +386,7 @@ void CPU::ADD_HL() // ADD HL, r16    len: 8t
 // Add signed value to SP
 void CPU::ADD_SP() // ADD SP, s8   len: 16t
 {
-	s8 offset = Read_s8();
+	s8 offset = Read8();
 	F_H = (SP & 0xF) + (offset & 0xF) > 0xF; // check if overflow from bit 3
 	F_C = (SP & 0xFF) + (offset & 0xFF) > 0xFF; // check if overflow from bit 7
 	SP += offset;
@@ -420,46 +398,28 @@ void CPU::ADD_SP() // ADD SP, s8   len: 16t
 // Store bitwise AND between r8 and A in A
 void CPU::AND_r8() // AND A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	u8 op = GetOpMod();
-	A &= op;
-	F_Z = A == 0;
-	F_N = 0;
-	F_H = 1;
-	F_C = 0;
+	AND(GetOpMod());
 }
 
 
 // Store bitwise AND between u8 and A in A
 void CPU::AND_u8() // AND A, u8    len: 8t
 {
-	u8 op = Read_u8();
-	A &= op;
-	F_Z = A == 0;
-	F_N = 0;
-	F_H = 1;
-	F_C = 0;
+	AND(Read8());
 }
 
 
 // Perform subtraction of r8 from A, but don't store the result
 void CPU::CP_r8() // CP A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	u8 op = GetOpMod();
-	F_Z = A - op == 0;
-	F_N = 1;
-	F_H = (op & 0xF) > (A & 0xF); // check if borrow from bit 4
-	F_C = op > A; // check if borrow
+	CP(GetOpMod());
 }
 
 
 // Perform subtraction of u8 from A, but don't store the result
 void CPU::CP_u8() // CP A, u8    len: 8t
 {
-	u8 op = Read_u8();
-	F_Z = A - op == 0;
-	F_N = 1;
-	F_H = (op & 0xF) > (A & 0xF); // check if borrow from bit 4
-	F_C = op > A; // check if borrow
+	CP(Read8());
 }
 
 
@@ -522,40 +482,109 @@ void CPU::INC_r16() // INC r16    len: 8t
 // Perform bitwise OR between A and r8, and store the result in A
 void CPU::OR_r8() // OR A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	u8 op = GetOpMod();
-	A |= op;
-	F_Z = A == 0;
-	F_N = F_H = F_C = 0;
+	OR(GetOpMod());
 }
 
 
 // Perform bitwise OR between A and u8, and store the result in A
 void CPU::OR_u8() // OR A, u8    len: 8t
 {
-	u8 op = Read_u8();
-	A |= op;
-	F_Z = A == 0;
-	F_N = F_H = F_C = 0;
+	OR(Read8());
 }
 
 
 // Subtract r8 and carry flag from A
 void CPU::SBC_r8() // SBC A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	u8 op = GetOpMod();
-	u16 delta = op + F_C;
-	F_N = 1;
-	F_H = (op & 0xF) + F_C > (A & 0xF); // check if borrow from bit 4
-	F_C = delta > A; // check if borrow
-	A -= delta;
-	F_Z = A == 0;
+	SBC(GetOpMod());
 }
 
 
 // Subtract u8 and carry flag from A
 void CPU::SBC_u8() // SBC A, u8    len: 8t
 {
-	u8 op = Read_u8();
+	SBC(Read8());
+}
+
+
+// Subtract r8 from A
+void CPU::SUB_r8() // SUB A, r8    len: 4t if r8 != (HL), otherwise 8t
+{
+	SUB(GetOpMod());
+}
+
+
+// Subtract u8 from A
+void CPU::SUB_u8() // SUB A, u8    len: 8t
+{
+	SUB(Read8());
+}
+
+
+// Perform bitwise XOR between A and r8, and store the result in A
+void CPU::XOR_r8() // XOR A, r8    len: 4t if r8 != (HL), otherwise 8t
+{
+	XOR(GetOpMod());
+}
+
+
+// Perform bitwise XOR between A and u8, and store the result in A
+void CPU::XOR_u8() // XOR A, u8    len: 8t
+{
+	XOR(Read8());
+}
+
+
+void CPU::ADC(u8 op)
+{
+	u16 delta = op + F_C;
+	F_N = 0;
+	F_H = (A & 0xF) + (op & 0xF) + F_C > 0xF; // check if overflow from bit 3
+	F_C = (A + delta > 0xFF); // check if overflow from bit 7
+	A += delta;
+	F_Z = A == 0;
+}
+
+
+void CPU::ADD_A(u8 op)
+{
+	F_N = 0;
+	F_H = ((A & 0xF) + (op & 0xF) > 0xF); // check if overflow from bit 3
+	F_C = (A + op > 0xFF); // check if overflow from bit 7
+	A += op;
+	F_Z = A == 0;
+}
+
+
+void CPU::AND(u8 op)
+{
+	A &= op;
+	F_Z = A == 0;
+	F_N = 0;
+	F_H = 1;
+	F_C = 0;
+}
+
+
+void CPU::CP(u8 op)
+{
+	F_Z = A - op == 0;
+	F_N = 1;
+	F_H = (op & 0xF) > (A & 0xF); // check if borrow from bit 4
+	F_C = op > A; // check if borrow
+}
+
+
+void CPU::OR(u8 op)
+{
+	A |= op;
+	F_Z = A == 0;
+	F_N = F_H = F_C = 0;
+}
+
+
+void CPU::SBC(u8 op)
+{
 	u16 delta = op + F_C;
 	F_N = 1;
 	F_H = (op & 0xF) + F_C > (A & 0xF); // check if borrow from bit 4
@@ -565,10 +594,8 @@ void CPU::SBC_u8() // SBC A, u8    len: 8t
 }
 
 
-// Subtract r8 from A
-void CPU::SUB_r8() // SUB A, r8    len: 4t if r8 != (HL), otherwise 8t
+void CPU::SUB(u8 op)
 {
-	u8 op = GetOpMod();
 	F_N = 1;
 	F_H = (op & 0xF) > (A & 0xF); // check if borrow from bit 4
 	F_C = op > A; // check if borrow
@@ -577,32 +604,8 @@ void CPU::SUB_r8() // SUB A, r8    len: 4t if r8 != (HL), otherwise 8t
 }
 
 
-// Subtract u8 from A
-void CPU::SUB_u8() // SUB A, u8    len: 8t
+void CPU::XOR(u8 op)
 {
-	u8 op = Read_u8();
-	F_N = 1;
-	F_H = (op & 0xF) > (A & 0xF); // check if borrow from bit 4
-	F_C = op > A; // check if borrow
-	A -= op;
-	F_Z = A == 0;
-}
-
-
-// Perform bitwise XOR between A and r8, and store the result in A
-void CPU::XOR_r8() // XOR A, r8    len: 4t if r8 != (HL), otherwise 8t
-{
-	u8 op = GetOpMod();
-	A ^= op;
-	F_Z = A == 0;
-	F_N = F_H = F_C = 0;
-}
-
-
-// Perform bitwise XOR between A and u8, and store the result in A
-void CPU::XOR_u8() // XOR A, u8    len: 8t
-{
-	u8 op = Read_u8();
 	A ^= op;
 	F_Z = A == 0;
 	F_N = F_H = F_C = 0;
@@ -788,7 +791,7 @@ void CPU::SWAP() // SWAP r8    len: 8t if r8 != (HL), otherwise 16t (prefixed in
 // Prefixed instructions
 void CPU::CB() // CB <instr>
 {
-	opcode = Read_u8();
+	opcode = Read8();
 
 	#ifdef DEBUG
 		char buf[200]{};
@@ -818,7 +821,7 @@ void CPU::CB() // CB <instr>
 // Jump to subroutine; set PC to u16 if condition holds
 void CPU::CALL() // CALL cc, u16    len: 24t if branch is successful, else 12t
 {
-	u16 newPC = Read_u16();
+	u16 newPC = Read16();
 	if (GetCond())
 	{
 		WaitCycle();
@@ -860,10 +863,10 @@ void CPU::RETI() // RETI    len: 16t
 // Relative jump; add a signed 8-bit integer to the address of the instruction following the JR if the condition holds
 void CPU::JR() // JR cc, s8    len: 12t if the branch is successful, else 8t
 {
-	s8 offset = Read_s8();
+	s8 offset = Read8();
 	if (GetCond())
 	{
-		PC += offset; // todo: someone said to "sign extend by casting u8 to s8 to u16 before adding to PC"
+		PC += offset;
 		WaitCycle();
 	}
 }
@@ -872,7 +875,7 @@ void CPU::JR() // JR cc, s8    len: 12t if the branch is successful, else 8t
 // Absolute jump; jump to the address specified by u16 if the condition holds
 void CPU::JP_u16() // JP cc, u16    len: 16t if the branch is successful, else 12t
 {
-	u16 word = Read_u16();
+	u16 word = Read16();
 	if (GetCond())
 	{
 		PC = word;

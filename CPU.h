@@ -65,9 +65,8 @@ private:
 
 	void CheckInterrupts();
 
-	u8  Read_u8()  { return bus->ReadCycle(PC++); };
-	u16 Read_u16() { PC += 2; return bus->ReadCycle(PC - 2) | bus->ReadCycle(PC - 1) << 8; };
-	s8  Read_s8()  { return (s8)bus->ReadCycle(PC++); };
+	u8  Read8()  { return bus->ReadCycle(PC++); };
+	u16 Read16() { PC += 2; return bus->ReadCycle(PC - 2) | bus->ReadCycle(PC - 1) << 8; };
 
 	void WaitCycle(const unsigned cycles = 1) { bus->WaitCycle(cycles); };
 
@@ -123,6 +122,16 @@ private:
 	void SUB_u8();
 	void XOR_r8();
 	void XOR_u8();
+
+	// arithmeticand logic instructions generalized to both r8 and u8 (op)
+	void ADC(u8 op);
+	void ADD_A(u8 op);
+	void AND(u8 op);
+	void CP(u8 op);
+	void OR(u8 op);
+	void SBC(u8 op);
+	void SUB(u8 op);
+	void XOR(u8 op);
 
 	// bit operation instructions
 	void BIT();
