@@ -1026,22 +1026,49 @@ void CPU::SCF() // SCF    len: 4t
 }
 
 
-// Enter stop mode
+// Enter stop mode on DMG, switch between single and double speed modes on CGB
 void CPU::STOP() // STOP    len: 4t
 {
-	// on DMG, enter low power mode. On the CGB, switch between normal and double speed (if KEY1.0 has been set)
-	if (System::mode == System::Mode::CGB)
+	// This instruction is very glitchy, see https://pbs.twimg.com/media/E5jlgW9XIAEKj0t.png:large
+	// On DMG, enter low power mode. On the CGB, switch between normal and double speed (if KEY1.0 has been set).
+	
+	// TODO: Test if a button is being held and selected in JOYP
+	
+	u8 KEY1 = bus->Read(Bus::Addr::KEY1);
+	if ((KEY1 & 0x01) && System::mode == System::Mode::CGB) // If a speed switch was requested
 	{
-		u8 KEY1 = bus->Read(Bus::Addr::KEY1);
-		if (CheckBit(KEY1, 0) == 1)
+		if (*IE & *IF & 0x1F) // If an interrupt is pending
+		{
+			if (IME)
+			{
+				// Glitch non-deterministically.
+				// For now, emulated as successfully performing a speed switch.
+				bus->ResetDIV();
+				InitiateSpeedSwitch();
+			}
+			else
+			{
+				// Successfully perform a speed switch.
+				bus->ResetDIV();
+				InitiateSpeedSwitch();
+			}
+		}
+		else
+		{
+			// Successfully perform a speed switch with STOP as a 2-byte instruction. Also, enter HALT.
+			PC++;
+			HALT();
+			bus->ResetDIV();
 			InitiateSpeedSwitch();
+		}
 	}
 	else
 	{
+		// DIV is reset and STOP mode is reset. STOP is a 2-byte opcode if an interrupt is not pending
+		if ((*IE & *IF & 0x1F) == 0)
+			PC++;
 		bus->ResetDIV();
-
 		in_stop_mode = true;
-		// todo. Seems like no licensed rom makes use of STOP in DMG mode anyways
 	}
 }
 
@@ -1123,7 +1150,7 @@ void CPU::CheckInterrupts()
 	{
 		// fetch bits 0-4 of the IF IE registers
 		u8 AND = *IF & *IE & 0x1F;
-		if (AND != 0) // if any enabled interrupt is requested
+		if (AND) // if any enabled interrupt is requested
 		{
 			WaitCycle(2);
 			PushPC();
@@ -1146,7 +1173,7 @@ void CPU::CheckInterrupts()
 	}
 	if (in_halt_mode)
 	{ // check if HALT mode should be exited, which is when enabled interrupt is requested
-		if ((*IF & *IE & 0x1F) != 0)
+		if (*IF & *IE & 0x1F)
 		{
 			in_halt_mode = false;
 		}
