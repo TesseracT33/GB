@@ -159,7 +159,7 @@ void CPU::LD_r8_r8() // LD r8, r8    len: 4t if the first and second r8 != (HL),
 }
 
 
-// Load u8 into r8 (r8 is not (HL))
+// Load u8 into r8
 void CPU::LD_r8_u8() // LD r8, u8    len: 8t if r8 != (HL), else 12t
 {
 	u8 op = Read8();
