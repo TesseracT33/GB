@@ -88,9 +88,8 @@ bool CPU::GetCond()
 }
 
 
-u8 CPU::GetOpMod()
+u8 CPU::GetRegMod()
 {
-	HL_set = false;
 	switch (opcode % 8)
 	{
 	case 0: return B;
@@ -99,15 +98,14 @@ u8 CPU::GetOpMod()
 	case 3: return E;
 	case 4: return H;
 	case 5: return L;
-	case 6: HL_set = true; return bus->ReadCycle(HL);
+	case 6: return bus->ReadCycle(HL);
 	case 7: return A;
 	}
 }
 
 
-u8 CPU::GetOpDiv(u8 offset)
+u8 CPU::GetRegDiv(u8 offset)
 {
-	HL_set = false;
 	switch ((opcode - offset) / 8)
 	{
 	case 0: return B;
@@ -116,76 +114,56 @@ u8 CPU::GetOpDiv(u8 offset)
 	case 3: return E;
 	case 4: return H;
 	case 5: return L;
-	case 6: HL_set = true; return bus->ReadCycle(HL);
+	case 6: return bus->ReadCycle(HL);
 	case 7: return A;
 	}
 }
 
 
-u8* CPU::GetOpModPointer()
+void CPU::SetRegMod(u8 op)
 {
-	HL_set = false;
 	switch (opcode % 8)
 	{
-	case 0: return &B;
-	case 1: return &C;
-	case 2: return &D;
-	case 3: return &E;
-	case 4: return &H;
-	case 5: return &L;
-	case 6: HL_set = true; read_HL = bus->ReadCycle(HL); return &read_HL;
-	case 7: return &A;
+	case 0: B = op; break;
+	case 1: C = op; break;
+	case 2: D = op; break;
+	case 3: E = op; break;
+	case 4: H = op; break;
+	case 5: L = op; break;
+	case 6: bus->WriteCycle(HL, op); break;
+	case 7: A = op; break;
 	}
 }
 
-u8* CPU::GetOpDivPointer(u8 offset)
+void CPU::SetRegDiv(u8 op, u8 offset)
 {
-	HL_set = false;
 	switch ((opcode - offset) / 8)
 	{
-	case 0: return &B;
-	case 1: return &C;
-	case 2: return &D;
-	case 3: return &E;
-	case 4: return &H;
-	case 5: return &L;
-	case 6: HL_set = true; read_HL = bus->ReadCycle(HL); return &read_HL;
-	case 7: return &A;
+	case 0: B = op; break;
+	case 1: C = op; break;
+	case 2: D = op; break;
+	case 3: E = op; break;
+	case 4: H = op; break;
+	case 5: L = op; break;
+	case 6: bus->WriteCycle(HL, op); break;
+	case 7: A = op; break;
 	}
 }
 
 
-// Load the value of the second r8 into the first r8 (the first operand is not (HL))
-void CPU::LD_r8_r8() // LD r8, r8    len: 4t if the second r8 != (HL), else 8t
+// Load the value of the second r8 into the first r8
+void CPU::LD_r8_r8() // LD r8, r8    len: 4t if the first and second r8 != (HL), else 8t
 {
-	u8* op1 = GetOpDivPointer(0x40);
-	u8 op2 = GetOpMod();
-	*op1 = op2;
-}
-
-
-// Load the value of r8 into the memory location pointed to by HL
-void CPU::LD_HL_r8() // LD (HL), r8    len: 8t
-{
-	u8 op = GetOpMod();
-	bus->WriteCycle(HL, op);
+	u8 op = GetRegMod();
+	SetRegDiv(op, 0x40);
 }
 
 
 // Load u8 into r8 (r8 is not (HL))
-void CPU::LD_r8_u8() // LD r8, u8    len: 8t
-{
-	u8* op1 = GetOpDivPointer(0);
-	u8 op2 = Read8();
-	*op1 = op2;
-}
-
-
-// Load u8 into (HL)
-void CPU::LD_HL_u8() // LD (HL), u8    len: 12t
+void CPU::LD_r8_u8() // LD r8, u8    len: 8t if r8 != (HL), else 12t
 {
 	u8 op = Read8();
-	bus->WriteCycle(HL, op);
+	SetRegDiv(op, 0);
 }
 
 
@@ -337,7 +315,7 @@ void CPU::LDH_A_C() // LD A, (FF00+C)    len: 8t
 // Add r8 and carry flag to register A
 void CPU::ADC_r8() // ADC A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	ADC(GetOpMod());
+	ADC(GetRegMod());
 }
 
 
@@ -351,7 +329,7 @@ void CPU::ADC_u8() // ADC A, u8    len: 8t
 // Add r8 to register A
 void CPU::ADD_A_r8() // ADD A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	ADD_A(GetOpMod());
+	ADD_A(GetRegMod());
 }
 
 
@@ -398,7 +376,7 @@ void CPU::ADD_SP() // ADD SP, s8   len: 16t
 // Store bitwise AND between r8 and A in A
 void CPU::AND_r8() // AND A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	AND(GetOpMod());
+	AND(GetRegMod());
 }
 
 
@@ -412,7 +390,7 @@ void CPU::AND_u8() // AND A, u8    len: 8t
 // Perform subtraction of r8 from A, but don't store the result
 void CPU::CP_r8() // CP A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	CP(GetOpMod());
+	CP(GetRegMod());
 }
 
 
@@ -426,14 +404,12 @@ void CPU::CP_u8() // CP A, u8    len: 8t
 // Decrement 8-bit register by 1
 void CPU::DEC_r8() // DEC r8    len: 4t if r8 != (HL), otherwise 12t
 {
-	u8* op = GetOpDivPointer(0);
+	u8 reg = GetRegDiv(0);
 	F_N = 1;
-	F_H = (*op & 0xF) == 0; // check if borrow from bit 4
-	(*op)--;
-	F_Z = *op == 0;
-
-	if (HL_set)
-		bus->WriteCycle(HL, *op);
+	F_H = (reg & 0xF) == 0; // check if borrow from bit 4
+	reg--;
+	F_Z = reg == 0;
+	SetRegDiv(reg, 0);
 }
 
 
@@ -454,14 +430,12 @@ void CPU::DEC_r16() // DEC r16    len: 8t
 // Increment 8-bit register by 1
 void CPU::INC_r8() // INC r8    len: 4t if r8 != (HL), otherwise 12t
 {
-	u8* op = GetOpDivPointer(0);
+	u8 reg = GetRegDiv(0);
 	F_N = 0;
-	F_H = (*op & 0xF) == 0xF; // check if overflow from bit 3
-	(*op)++;
-	F_Z = *op == 0;
-
-	if (HL_set)
-		bus->WriteCycle(HL, *op);
+	F_H = (reg & 0xF) == 0xF; // check if overflow from bit 3
+	reg++;
+	F_Z = reg == 0;
+	SetRegDiv(reg, 0);
 }
 
 
@@ -482,7 +456,7 @@ void CPU::INC_r16() // INC r16    len: 8t
 // Perform bitwise OR between A and r8, and store the result in A
 void CPU::OR_r8() // OR A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	OR(GetOpMod());
+	OR(GetRegMod());
 }
 
 
@@ -496,7 +470,7 @@ void CPU::OR_u8() // OR A, u8    len: 8t
 // Subtract r8 and carry flag from A
 void CPU::SBC_r8() // SBC A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	SBC(GetOpMod());
+	SBC(GetRegMod());
 }
 
 
@@ -510,7 +484,7 @@ void CPU::SBC_u8() // SBC A, u8    len: 8t
 // Subtract r8 from A
 void CPU::SUB_r8() // SUB A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	SUB(GetOpMod());
+	SUB(GetRegMod());
 }
 
 
@@ -524,7 +498,7 @@ void CPU::SUB_u8() // SUB A, u8    len: 8t
 // Perform bitwise XOR between A and r8, and store the result in A
 void CPU::XOR_r8() // XOR A, r8    len: 4t if r8 != (HL), otherwise 8t
 {
-	XOR(GetOpMod());
+	XOR(GetRegMod());
 }
 
 
@@ -615,14 +589,13 @@ void CPU::XOR(u8 op)
 // Rotate register r8 left through carry.
 void CPU::RL() // RL r8    len: 8t if r8 != (HL), otherwise 16t (prefixed instruction)
 {
-	u8* reg = GetOpModPointer();
-	bool bit7 = *reg >> 7;
-	*reg = (*reg & 0x7F) << 1 | F_C;
+	u8 reg = GetRegMod();
+	bool bit7 = reg >> 7;
+	reg = (reg & 0x7F) << 1 | F_C;
 	F_C = bit7;
-	F_Z = *reg == 0;
+	F_Z = reg == 0;
 	F_N = F_H = 0;
-	if (HL_set)
-		bus->WriteCycle(HL, *reg);
+	SetRegMod(reg);
 }
 
 
@@ -639,13 +612,12 @@ void CPU::RLA() // RLA    len: 4t
 // Rotate register r8 left
 void CPU::RLC() // RLC r8    len: 8t if r8 != (HL), otherwise 16t (prefixed instruction)
 {
-	u8* reg = GetOpModPointer();
-	F_C = *reg >> 7;
-	*reg = _rotl8(*reg, 1); // rotate A left one bit.
-	F_Z = *reg == 0;
+	u8 reg = GetRegMod();
+	F_C = reg >> 7;
+	reg = _rotl8(reg, 1); // rotate A left one bit.
+	F_Z = reg == 0;
 	F_N = F_H = 0;
-	if (HL_set)
-		bus->WriteCycle(HL, *reg);
+	SetRegMod(reg);
 }
 
 
@@ -661,14 +633,13 @@ void CPU::RLCA() // RLCA    len: 4t
 // Rotate register r8 right through carry.
 void CPU::RR() // RR r8    len: 8t if r8 != (HL), otherwise 16t (prefixed instruction)
 {
-	u8* reg = GetOpModPointer();
-	bool bit0 = *reg & 1;
-	*reg = *reg >> 1 | F_C << 7;
+	u8 reg = GetRegMod();
+	bool bit0 = reg & 1;
+	reg = reg >> 1 | F_C << 7;
 	F_C = bit0;
-	F_Z = *reg == 0;
+	F_Z = reg == 0;
 	F_N = F_H = 0;
-	if (HL_set)
-		bus->WriteCycle(HL, *reg);
+	SetRegMod(reg);
 }
 
 
@@ -685,13 +656,12 @@ void CPU::RRA() // RRA    len: 4t
 // Rotate register r8 right
 void CPU::RRC() // RRC r8    len: 8t if r8 != (HL), otherwise 16t (prefixed instruction)
 {
-	u8* reg = GetOpModPointer();
-	F_C = *reg & 1;
-	*reg = _rotr8(*reg, 1); // rotate A right one bit.
-	F_Z = *reg == 0;
+	u8 reg = GetRegMod();
+	F_C = reg & 1;
+	reg = _rotr8(reg, 1); // rotate A right one bit.
+	F_Z = reg == 0;
 	F_N = F_H = 0;
-	if (HL_set)
-		bus->WriteCycle(HL, *reg);
+	SetRegMod(reg);
 }
 
 
@@ -707,39 +677,36 @@ void CPU::RRCA() // RRCA    len: 4t
 // Shift arithmetic register r8 left
 void CPU::SLA() // SLA r8    len: 8t if r8 != (HL), otherwise 16t (prefixed instruction)
 {
-	u8* reg = GetOpModPointer();
-	F_C = *reg >> 7;
-	*reg = *reg << 1 & 0xFF;
-	F_Z = *reg == 0;
+	u8 reg = GetRegMod();
+	F_C = reg >> 7;
+	reg <<= 1;
+	F_Z = reg == 0;
 	F_N = F_H = 0;
-	if (HL_set)
-		bus->WriteCycle(HL, *reg);
+	SetRegMod(reg);
 }
 
 
 // Shift arithmetic register r8 right
 void CPU::SRA() // SRA r8    len: 8t if r8 != (HL), otherwise 16t (prefixed instruction)
 {
-	u8* reg = GetOpModPointer();
-	F_C = *reg & 1;
-	*reg = *reg >> 1 | *reg & 0x80;
-	F_Z = *reg == 0;
+	u8 reg = GetRegMod();
+	F_C = reg & 1;
+	reg = reg >> 1 | reg & 0x80;
+	F_Z = reg == 0;
 	F_N = F_H = 0;
-	if (HL_set)
-		bus->WriteCycle(HL, *reg);
+	SetRegMod(reg);
 }
 
 
 // Shift logic register r8 right
 void CPU::SRL() // SRL r8    len: 8t if r8 != (HL), otherwise 16t (prefixed instruction)
 {
-	u8* reg = GetOpModPointer();
-	F_C = *reg & 1;
-	*reg >>= 1;
-	F_Z = *reg == 0;
+	u8 reg = GetRegMod();
+	F_C = reg & 1;
+	reg >>= 1;
+	F_Z = reg == 0;
 	F_N = F_H = 0;
-	if (HL_set)
-		bus->WriteCycle(HL, *reg);
+	SetRegMod(reg);
 }
 
 
@@ -747,7 +714,7 @@ void CPU::SRL() // SRL r8    len: 8t if r8 != (HL), otherwise 16t (prefixed inst
 void CPU::BIT() // BIT pos, r8    len: 8t if r8 != (HL), otherwise 12t (prefixed instruction)
 {
 	u8 pos = (opcode - 0x40) / 8;
-	u8 reg = GetOpMod();
+	u8 reg = GetRegMod();
 	F_Z = CheckBit(reg, pos) == 0;
 	F_N = 0;
 	F_H = 1;
@@ -758,10 +725,9 @@ void CPU::BIT() // BIT pos, r8    len: 8t if r8 != (HL), otherwise 12t (prefixed
 void CPU::RES() // RES pos, r8    len: 8t if r8 != (HL), otherwise 16t (prefixed instruction)
 {
 	u8 pos = (opcode - 0x80) / 8;
-	u8* reg = GetOpModPointer();
-	ClearBit(reg, pos);
-	if (HL_set)
-		bus->WriteCycle(HL, *reg);
+	u8 reg = GetRegMod();
+	ClearBit(&reg, pos);
+	SetRegMod(reg);
 }
 
 
@@ -769,22 +735,20 @@ void CPU::RES() // RES pos, r8    len: 8t if r8 != (HL), otherwise 16t (prefixed
 void CPU::SET() // SET pos, r8    len: 8t if r8 != (HL), otherwise 16t (prefixed instruction)
 {
 	u8 pos = (opcode - 0xC0) / 8;
-	u8* reg = GetOpModPointer();
-	SetBit(reg, pos);
-	if (HL_set)
-		bus->WriteCycle(HL, *reg);
+	u8 reg = GetRegMod();
+	SetBit(&reg, pos);
+	SetRegMod(reg);
 }
 
 
 // Swap upper 4 bits in register r8 and the lower 4 ones. 
 void CPU::SWAP() // SWAP r8    len: 8t if r8 != (HL), otherwise 16t (prefixed instruction)
 {
-	u8* reg = GetOpModPointer();
-	*reg = _rotl8(*reg, 4);
-	F_Z = *reg == 0;
+	u8 reg = GetRegMod();
+	reg = _rotl8(reg, 4);
+	F_Z = reg == 0;
 	F_N = F_H = F_C = 0;
-	if (HL_set)
-		bus->WriteCycle(HL, *reg);
+	SetRegMod(reg);
 }
 
 
