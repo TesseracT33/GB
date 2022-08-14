@@ -145,6 +145,7 @@
     <ClCompile Include="src\GB.ixx" />
     <ClCompile Include="src\Joypad.cpp" />
     <ClCompile Include="src\Joypad.ixx" />
+    <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\Palettes.ixx" />
     <ClCompile Include="src\PPU.cpp" />
     <ClCompile Include="src\PPU.ixx" />

@@ -3,59 +3,69 @@ export module GB;
 import APU;
 import Bus;
 import Cartridge;
+import Core;
 import CPU;
 import DMA;
 import Joypad;
+import NumericalTypes;
 import PPU;
 import Serial;
+import SerializationStream;
 import System;
 import Timer;
 
-import NumericalTypes;
-import SerializationStream;
-
 import <string>;
+import <string_view>;
+import <vector>;
 
-export namespace GB
+export struct GB : Core
 {
-	void ApplyNewSampleRate()
+	void ApplyNewSampleRate() override
 	{
 		APU::ApplyNewSampleRate();
 	}
 
 
-	bool AssociatesWithRomExtension(const std::string& ext)
-	{
-		return ext.compare("gb") == 0 || ext.compare("gbc") == 0
-			|| ext.compare("GB") == 0 || ext.compare("GBC") == 0;
-	}
-
-
-	void Detach()
+	void Detach() override
 	{
 		Cartridge::Eject();
 	}
 
 
-	void DisableAudio()
+	void DisableAudio() override
 	{
 		// TODO
 	}
 
 
-	void EnableAudio()
+	void EnableAudio() override
 	{
 		// TODO
 	}
 
 
-	uint GetNumberOfInputs()
+	std::vector<std::string_view> GetActionNames() override
+	{
+		std::vector<std::string_view> names{};
+		names.emplace_back("A");
+		names.emplace_back("B");
+		names.emplace_back("Select");
+		names.emplace_back("Start");
+		names.emplace_back("Right");
+		names.emplace_back("Left");
+		names.emplace_back("Up");
+		names.emplace_back("Down");
+		return names;
+	}
+
+
+	uint GetNumberOfInputs() override
 	{
 		return 8;
 	}
 
 
-	void Initialize()
+	void Initialize() override
 	{
 		APU::Initialize();
 		Bus::Initialize();
@@ -70,25 +80,25 @@ export namespace GB
 	}
 
 
-	bool LoadBios(const std::string& path)
+	bool LoadBios(const std::string& path) override
 	{
 		return Bus::LoadBootRom(path);
 	}
 
 
-	bool LoadRom(const std::string& path)
+	bool LoadRom(const std::string& path) override
 	{
 		return Cartridge::LoadRom(path);
 	}
 
 
-	void NotifyNewAxisValue(uint player_index, uint input_action_index, int axis_value)
+	void NotifyNewAxisValue(uint player_index, uint input_action_index, int axis_value) override
 	{
 		/* no axes */
 	}
 
 
-	void NotifyButtonPressed(uint player_index, uint input_action_index)
+	void NotifyButtonPressed(uint player_index, uint input_action_index) override
 	{
 		if (player_index == 0) {
 			Joypad::NotifyButtonPressed(input_action_index);
@@ -96,7 +106,7 @@ export namespace GB
 	}
 
 
-	void NotifyButtonReleased(uint player_index, uint input_action_index)
+	void NotifyButtonReleased(uint player_index, uint input_action_index) override
 	{
 		if (player_index == 0) {
 			Joypad::NotifyButtonReleased(input_action_index);
@@ -104,7 +114,7 @@ export namespace GB
 	}
 
 
-	void Reset()
+	void Reset() override
 	{ // TODO: reset vs initialize
 		APU::Initialize();
 		Bus::Initialize();
@@ -119,13 +129,13 @@ export namespace GB
 	}
 
 
-	void Run()
+	void Run() override
 	{
 		CPU::Run();
 	}
 
 
-	void StreamState(SerializationStream& stream)
+	void StreamState(SerializationStream& stream) override
 	{
 		APU::StreamState(stream);
 		Bus::StreamState(stream);
@@ -138,4 +148,4 @@ export namespace GB
 		System::StreamState(stream);
 		Timer::StreamState(stream);
 	}
-}
+};
