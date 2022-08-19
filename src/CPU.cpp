@@ -5,7 +5,6 @@ import Debug;
 import DMA;
 import System;
 import Timer;
-
 import UserMessage;
 import Util;
 
@@ -80,6 +79,14 @@ namespace CPU
 	u8 ReadCyclePageFF(u8 offset)
 	{
 		u8 data = Bus::ReadPageFF(offset);
+		System::StepAllComponentsButCpu();
+		return data;
+	}
+
+
+	u8 ReadCyclePC()
+	{
+		u8 data = Bus::ReadPC(pc++);
 		System::StepAllComponentsButCpu();
 		return data;
 	}
@@ -162,25 +169,25 @@ namespace CPU
 		if constexpr (reg == Reg16::SP) return sp;
 	}
 
-	
+
 	template<Reg16 reg>
 	void SetReg16(const u16 value)
 	{
 		if constexpr (reg == Reg16::AF) {
-			A = value >> 8 & 0xFF; 
-			F = std::bit_cast<decltype(F), u8>(u8(value & 0xFF)); 
+			A = value >> 8 & 0xFF;
+			F = std::bit_cast<decltype(F), u8>(u8(value & 0xFF));
 		}
 		if constexpr (reg == Reg16::BC) {
-			B = value >> 8 & 0xFF; 
+			B = value >> 8 & 0xFF;
 			C = value & 0xFF;
 		}
 		if constexpr (reg == Reg16::DE) {
 			D = value >> 8 & 0xFF;
-			E = value & 0xFF; 
+			E = value & 0xFF;
 		}
 		if constexpr (reg == Reg16::HL) {
 			H = value >> 8 & 0xFF;
-			L = value & 0xFF; 
+			L = value & 0xFF;
 		}
 		if constexpr (reg == Reg16::PC) {
 			pc = value;
@@ -193,14 +200,14 @@ namespace CPU
 
 	u8 Read8()
 	{
-		return ReadCycle(pc++);
+		return ReadCyclePC();
 	}
 
 
 	u16 Read16()
 	{
-		u8 low = ReadCycle(pc++);
-		u8 high = ReadCycle(pc++);
+		u8 low = ReadCyclePC();
+		u8 high = ReadCyclePC();
 		return low | high << 8;
 	}
 
@@ -240,7 +247,7 @@ namespace CPU
 				continue;
 			}
 			CheckInterrupts();
-			opcode = ReadCycle(pc);
+			opcode = ReadCyclePC();
 
 			if constexpr (Debug::log_instr) {
 				Debug::LogInstr(
@@ -249,7 +256,7 @@ namespace CPU
 					B << 8 | C,
 					D << 8 | E,
 					H << 8 | L,
-					pc,
+					pc - 1,
 					sp,
 					IE,
 					IF
@@ -257,7 +264,10 @@ namespace CPU
 			}
 
 			// If the previous instruction was HALT, there is a hardware bug in which PC is not incremented after the current instruction
-			halt_bug ? halt_bug = false : ++pc;
+			if (halt_bug) {
+				halt_bug = false;
+				pc--;
+			}
 			instr_table[opcode]();
 			// If the previous instruction was EI, the ime flag is set only after the instruction after the EI has been executed
 			if (ei_executed) {
@@ -348,19 +358,19 @@ namespace CPU
 
 	void WriteIE(u8 data)
 	{
-		IE = data;
+		IE = data | 0xE0;
 	}
 
 
 	u8 ReadIF()
 	{
-		return IF | 0xE0;
+		return IF;
 	}
 
 
 	void WriteIF(u8 data)
 	{
-		IF = data;
+		IF = data | 0xE0;
 	}
 
 
@@ -1172,7 +1182,7 @@ namespace CPU
 		if (ime || (IF & IE & 0x1F) == 0) {
 			in_halt_mode = true;
 		}
-		else { 
+		else {
 			// HALT is not entered, causing a bug where the CPU fails to increase PC when executing the next instruction
 			halt_bug = true;
 		}

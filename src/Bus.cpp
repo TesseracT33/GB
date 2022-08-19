@@ -1,4 +1,4 @@
-﻿module Bus;
+module Bus;
 
 import APU;
 import Boot;
@@ -11,10 +11,8 @@ import PPU;
 import Serial;
 import System;
 import Timer;
-
-import Util.Files;
-
 import UserMessage;
+import Util.Files;
 
 namespace Bus
 {
@@ -190,8 +188,10 @@ namespace Bus
 				}
 				return value;
 			}
+
+		default:
+			std::unreachable();
 		}
-		return 0xFF;
 	}
 
 
@@ -295,6 +295,88 @@ namespace Bus
 	}
 
 
+	/* This function is identical to the ordinary "Read" function. However, most of the time,
+	   when we read from PC, it should be in game code. Thus, we can get better branch prediction
+	   by splitting up PC and non-PC reads. */
+	u8 ReadPC(u16 addr)
+	{
+		switch (addr >> 12) {
+		case 0: /* $0000-$0FFF -- Cartridge ROM / boot ROM (0-FF DMG / 0-8FF CGB) */
+			if (boot_rom_mapped) {
+				if (System::mode == System::Mode::DMG && addr < Boot::dmg_boot_rom.size()) {
+					return Boot::dmg_boot_rom[addr];
+				}
+				else if (System::mode == System::Mode::CGB && addr < Boot::cgb_boot_rom.size()) {
+					return Boot::cgb_boot_rom[addr];
+				}
+				else {
+					return Cartridge::ReadRom(addr);
+				}
+			}
+			else {
+				return Cartridge::ReadRom(addr);
+			}
+
+		case 1: case 2: case 3: case 4: case 5: case 6: case 7: /* $1000-$7FFF -- Cartridge ROM */
+			return Cartridge::ReadRom(addr);
+
+		case 8: case 9: /* $8000-$9FFF -- VRAM */
+			return PPU::ReadVramCpu(addr);
+
+		case 0xA: case 0xB: /* $A000-$BFFF -- Cartridge RAM */
+			return Cartridge::ReadRam(addr);
+
+		case 0xC: /* $C000-$CFFF -- WRAM bank 0 */
+			return wram[addr - 0xC000];
+
+		case 0xD: /* $D000-$DFFF -- WRAM bank 1-7 (switchable in GBC mode only; in DMG mode always 1) */
+			return wram[addr - 0xD000 + current_wram_bank * wram_bank_size];
+
+		case 0xE: /* $E000-$EFFF -- ECHO; mirror of $C000-$CFFF */
+			return wram[addr - 0xE000];
+
+		case 0xF:
+			if (addr <= 0xFDFF) { /* $F000-$FDFF -- ECHO; mirror of $D000-$DDFF */
+				return wram[addr - 0xF000 + current_wram_bank * wram_bank_size];
+			}
+			else if (addr <= 0xFE9F) { /* $FE00-$FE9F -- OAM */
+				return PPU::ReadOamCpu(addr - 0xFE00);
+			}
+			else if (addr <= 0xFEFF) { /* $FEA0-$FEFF -- "Unused" */
+				// In DMG mode, reading returns 0. In CGB mode, see section 2.10 in TCAGBD.pdf
+				if (System::mode == System::Mode::CGB) {
+					return (PPU::ReadLCDC() & 3) == 3
+						? 0xFF
+						: unused_memory_area[addr - 0xFEA0];
+				}
+				else {
+					return 0;
+				}
+			}
+			else if (addr <= 0xFF7F) { /* $FF00-$FF7F -- I/O */
+				u8 value = ReadIO(addr);
+				if constexpr (Debug::log_io) {
+					Debug::LogIoRead(addr, value);
+				}
+				return value;
+			}
+			else if (addr <= 0xFFFE) { /* $FF80-$FFFE -- HRAM */
+				return hram[addr - 0xFF80];
+			}
+			else { /* $FFFF -- IE */
+				u8 value = CPU::ReadIE();
+				if constexpr (Debug::log_io) {
+					Debug::LogIoRead(addr, value);
+				}
+				return value;
+			}
+
+		default:
+			std::unreachable();
+		}
+	}
+
+
 	void StreamState(SerializationStream& stream)
 	{
 		stream.StreamPrimitive(boot_rom_mapped);
@@ -308,11 +390,7 @@ namespace Bus
 	void Write(const u16 addr, const u8 data)
 	{
 		switch (addr >> 12) {
-		case 0: /* $0000-$0FFF -- Cartridge ROM / boot ROM */
-			Cartridge::WriteRom(addr, data);
-			break;
-
-		case 1: case 2: case 3: case 4: case 5: case 6: case 7: /* $1000-$7FFF -- Cartridge ROM */
+		case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7: /* $0000-$7FFF -- Cartridge ROM */
 			Cartridge::WriteRom(addr, data);
 			break;
 
@@ -372,6 +450,10 @@ namespace Bus
 				}
 				CPU::WriteIE(data);
 			}
+			break;
+
+		default:
+			std::unreachable();
 		}
 	}
 

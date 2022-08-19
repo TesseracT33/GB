@@ -98,6 +98,7 @@ namespace Bus
 		u8 Peek(u16 addr);
 		u8 Read(u16 addr);
 		u8 ReadPageFF(u8 offset);
+		u8 ReadPC(u16 addr);
 		void StreamState(SerializationStream& stream);
 		void Write(u16 addr, u8 data);
 		void WritePageFF(u8 offset, u8 data);

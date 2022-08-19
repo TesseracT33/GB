@@ -58,6 +58,7 @@ namespace CPU
 	u16 Read16();
 	u8 ReadCycle(u16 addr);
 	u8 ReadCyclePageFF(u8 offset);
+	u8 ReadCyclePC();
 	void SetReg8(uint index, u8 value);
 	void WaitCycle();
 	void Write8(u8 value);
@@ -209,7 +210,7 @@ namespace CPU
 	}();
 
 	constexpr uint speed_switch_m_cycle_length = 2050;
-	
+
 	bool ei_executed = false;
 	bool halt_bug = false;
 	bool ime = false;
