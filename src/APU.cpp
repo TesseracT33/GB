@@ -346,27 +346,33 @@ namespace APU
 	void Update()
 	{
 		// Update() is called each m-cycle, but apu is updated each t-cycle
-		for (int i = 0; i < 4; ++i) {
-			t_cycle_sample_counter += sample_rate;
+		if (apu_enabled) {
+			for (int i = 0; i < 4; ++i) {
+				t_cycle_sample_counter += sample_rate;
+				if (t_cycle_sample_counter >= System::t_cycles_per_sec_base) {
+					Sample();
+					t_cycle_sample_counter -= System::t_cycles_per_sec_base;
+				}
+				//if (wave_ram_accessible_by_cpu_when_ch3_enabled) {
+				//	t_cycles_since_ch3_read_wave_ram++;
+				//	static constexpr int t_cycles_until_cpu_cant_read_wave_ram = 3;
+				//	if (t_cycles_since_ch3_read_wave_ram == t_cycles_until_cpu_cant_read_wave_ram) {
+				//		wave_ram_accessible_by_cpu_when_ch3_enabled = false;
+				//	}
+				//}
+				pulse_ch_1.Step();
+				pulse_ch_1.Step();
+				wave_ch.Step();
+				noise_ch.Step();
+				// note: the frame sequencer is updated from the Timer module
+			}
+		}
+		else {
+			t_cycle_sample_counter += 4 * sample_rate;
 			if (t_cycle_sample_counter >= System::t_cycles_per_sec_base) {
 				Sample();
 				t_cycle_sample_counter -= System::t_cycles_per_sec_base;
 			}
-			if (wave_ram_accessible_by_cpu_when_ch3_enabled) {
-				t_cycles_since_ch3_read_wave_ram++;
-				static constexpr int t_cycles_until_cpu_cant_read_wave_ram = 3;
-				if (t_cycles_since_ch3_read_wave_ram == t_cycles_until_cpu_cant_read_wave_ram) {
-					wave_ram_accessible_by_cpu_when_ch3_enabled = false;
-				}
-			}
-			if (!apu_enabled) {
-				continue;
-			}
-			pulse_ch_1.Step();
-			pulse_ch_1.Step();
-			wave_ch.Step();
-			noise_ch.Step();
-			// note: the frame sequencer is updated from the Timer module
 		}
 	}
 
