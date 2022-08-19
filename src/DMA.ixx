@@ -1,7 +1,6 @@
 export module DMA;
 
-import NumericalTypes;
-import SerializationStream;
+import Util;
 
 import <string_view>;
 

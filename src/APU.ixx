@@ -1,7 +1,6 @@
 export module APU;
 
-import NumericalTypes;
-import SerializationStream;
+import Util;
 
 import <array>;
 import <cstring>;
@@ -24,7 +23,7 @@ namespace APU
 
 		void ApplyNewSampleRate();
 		bool Enabled();
-		void Initialize();
+		void Initialize(bool hle_boot_rom);
 		u8 ReadWaveRamCpu(u16 addr);
 		void StepFrameSequencer();
 		void StreamState(SerializationStream& stream);

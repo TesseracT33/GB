@@ -507,7 +507,7 @@ namespace Debug
 		case 0xdc: return format("call c,{:04X}", word);
 		case 0xde: return format("sbc  a,{:02X}", lo);
 		case 0xdf: return "rst  $0018";
-		case 0xe0: return format("ldh  ({:02X}ff),a", lo);
+		case 0xe0: return format("ldh  ({:02X}FF),a", lo);
 		case 0xe1: return "pop  hl";
 		case 0xe2: return "ldh  ($ff00+c),a";
 		case 0xe5: return "push hl";
@@ -518,7 +518,7 @@ namespace Debug
 		case 0xea: return format("ld   ({:04X}),a", word);
 		case 0xee: return format("xor  a,{:02X}", lo);
 		case 0xef: return "rst  $0028";
-		case 0xf0: return format("ldh  a,({:02X}ff)", lo);
+		case 0xf0: return format("ldh  a,({:02X}FF)", lo);
 		case 0xf1: return "pop  af";
 		case 0xf2: return "ldh  a,($ff00+c)";
 		case 0xf3: return "di";
@@ -571,7 +571,7 @@ namespace Debug
 			return;
 		}
 		auto instr_str = Disassemble(PC);
-		log << std::format("{:04X} {} {}  AF:{:04X} BC:{:04X} DE:{:04X} HL:{:04X} SP:{:04X} IE:{:02X} IF:{:02X}\n",
+		log << std::format("{:04X}  {:02X}  {} \tAF:{:04X} BC:{:04X} DE:{:04X} HL:{:04X} SP:{:04X} IE:{:02X} IF:{:02X}\n",
 			PC, opcode, instr_str, AF, BC, DE, HL, SP, IE, IF);
 	}
 

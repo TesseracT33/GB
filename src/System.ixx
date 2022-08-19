@@ -1,7 +1,6 @@
 export module System;
 
-import NumericalTypes;
-import SerializationStream;
+import Util;
 
 import <utility>;
 

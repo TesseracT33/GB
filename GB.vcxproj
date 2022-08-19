@@ -129,6 +129,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="external\EmuUtils\src\Bit.ixx" />
+    <ClCompile Include="external\EmuUtils\src\Files.ixx" />
+    <ClCompile Include="external\EmuUtils\src\Host.ixx" />
+    <ClCompile Include="external\EmuUtils\src\Misc.ixx" />
+    <ClCompile Include="external\EmuUtils\src\NumericalTypes.ixx" />
+    <ClCompile Include="external\EmuUtils\src\SerializationStream.ixx" />
+    <ClCompile Include="external\EmuUtils\src\SSE.cpp" />
+    <ClCompile Include="external\EmuUtils\src\SSE.ixx" />
+    <ClCompile Include="external\EmuUtils\src\Util.ixx" />
     <ClCompile Include="src\APU.cpp" />
     <ClCompile Include="src\APU.ixx" />
     <ClCompile Include="src\Boot.ixx" />
@@ -160,6 +169,7 @@
     <None Include=".editorconfig" />
     <None Include=".gitattributes" />
     <None Include=".gitignore" />
+    <None Include=".gitmodules" />
     <None Include="LICENSE" />
     <None Include="README.md" />
   </ItemGroup>

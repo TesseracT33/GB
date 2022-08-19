@@ -1,7 +1,6 @@
 export module CPU;
 
-import NumericalTypes;
-import SerializationStream;
+import Util;
 
 import <array>;
 import <bit>;

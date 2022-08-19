@@ -1,7 +1,6 @@
 export module Timer;
 
-import NumericalTypes;
-import SerializationStream;
+import Util;
 
 namespace Timer
 {

@@ -1,7 +1,6 @@
 export module Serial;
 
-import NumericalTypes;
-import SerializationStream;
+import Util;
 
 namespace Serial
 {

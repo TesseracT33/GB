@@ -1,0 +1,3 @@
+[submodule "external/EmuUtils"]
+	path = external/EmuUtils
+	url = https://github.com/TesseracT33/EmuUtils

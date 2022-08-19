@@ -1,8 +1,7 @@
 export module PPU.Palettes;
 
 import PPU;
-
-import NumericalTypes;
+import Util;
 
 import <array>;
 

@@ -1,6 +1,6 @@
 export module Boot;
 
-import NumericalTypes;
+import Util;
 
 import <array>;
 

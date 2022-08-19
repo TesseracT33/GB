@@ -1,7 +1,6 @@
 module Joypad;
 
 import CPU;
-
 import Input;
 
 namespace Joypad

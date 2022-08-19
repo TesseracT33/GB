@@ -4,9 +4,6 @@ import CPU;
 import DMA;
 import PPU.Palettes;
 import System;
-
-import Util.Bit;
-
 import Video;
 
 namespace PPU
@@ -308,7 +305,7 @@ namespace PPU
 	}
 
 
-	void Initialize()
+	void Initialize(bool hle_boot_rom)
 	{
 		Video::SetFramebufferPtr(framebuffer.data());
 		Video::SetFramebufferSize(resolution_x, resolution_y);
@@ -318,12 +315,6 @@ namespace PPU
 
 		oam.fill(0);
 		vram.fill(0);
-
-		bgp = ly = lyc = scx = scy = wx = wy = 0;
-		obp_dmg[0] = obp_dmg[1] = 0xFF;
-		lcdc = std::bit_cast<decltype(lcdc), u8>(u8(0));
-		stat = std::bit_cast<decltype(stat), u8>(u8(0));
-		ReadLcdcFlags();
 
 		sprite_buffer.clear();
 		sprite_buffer.reserve(sprite_buffer_capacity);
@@ -341,6 +332,20 @@ namespace PPU
 		bg_tile_fetcher.Reset(true);
 		sprite_fetcher.Reset();
 		pixel_shifter.Reset();
+
+		if (hle_boot_rom) {
+			bgp = 0xFC;
+			lcdc = std::bit_cast<decltype(lcdc), u8>(u8(0x91));
+			stat = std::bit_cast<decltype(stat), u8>(u8(0x81));
+		}
+		else {
+			bgp = 0;
+			lcdc = std::bit_cast<decltype(lcdc), u8>(u8(0));
+			stat = std::bit_cast<decltype(stat), u8>(u8(0));
+		}
+		ly = lyc = scx = scy = wx = wy = 0;
+		obp_dmg[0] = obp_dmg[1] = 0xFF;
+		ReadLcdcFlags();
 
 		obj_priority_mode = ObjPriorityMode::Coordinate;
 		SetLcdMode(LcdMode::SearchOam);

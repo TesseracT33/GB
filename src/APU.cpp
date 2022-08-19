@@ -1,11 +1,8 @@
 module APU;
 
+import Audio;
 import Bus;
 import System;
-
-import Audio;
-
-import Util;
 
 namespace APU
 {
@@ -237,7 +234,7 @@ namespace APU
 	}
 
 
-	void Initialize()
+	void Initialize(bool hle_boot_rom)
 	{
 		ResetAllRegisters();
 		pulse_ch_1.Initialize();
@@ -353,13 +350,6 @@ namespace APU
 					Sample();
 					t_cycle_sample_counter -= System::t_cycles_per_sec_base;
 				}
-				//if (wave_ram_accessible_by_cpu_when_ch3_enabled) {
-				//	t_cycles_since_ch3_read_wave_ram++;
-				//	static constexpr int t_cycles_until_cpu_cant_read_wave_ram = 3;
-				//	if (t_cycles_since_ch3_read_wave_ram == t_cycles_until_cpu_cant_read_wave_ram) {
-				//		wave_ram_accessible_by_cpu_when_ch3_enabled = false;
-				//	}
-				//}
 				pulse_ch_1.Step();
 				pulse_ch_1.Step();
 				wave_ch.Step();

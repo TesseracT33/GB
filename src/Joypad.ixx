@@ -1,7 +1,6 @@
 export module Joypad;
 
-import NumericalTypes;
-import SerializationStream;
+import Util;
 
 import <array>;
 import <utility>;

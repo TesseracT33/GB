@@ -5,8 +5,6 @@ import CPU;
 import Debug;
 import System;
 
-import Util;
-
 namespace DMA
 {
 	bool CgbDmaCurrentlyCopyingData()

@@ -7,12 +7,11 @@ import Core;
 import CPU;
 import DMA;
 import Joypad;
-import NumericalTypes;
 import PPU;
 import Serial;
-import SerializationStream;
 import System;
 import Timer;
+import Util;
 
 import <string>;
 import <string_view>;

@@ -1,8 +1,7 @@
 export module Debug;
 
 import CPU;
-
-import NumericalTypes;
+import Util;
 
 import <array>;
 import <cassert>;
@@ -26,11 +25,11 @@ namespace Debug
 		void LogIoWrite(u16 addr, u8 value);
 		void SetLogPath(const std::string& path);
 
-		constexpr bool logging_enabled = false;
-		constexpr bool log_instr = logging_enabled && true;
-		constexpr bool log_dma = logging_enabled && true;
-		constexpr bool log_interrupts = logging_enabled && true;
-		constexpr bool log_io = logging_enabled && true;
+		constexpr bool logging_enabled = 1;
+		constexpr bool log_instr = logging_enabled && 1;
+		constexpr bool log_dma = logging_enabled && 0;
+		constexpr bool log_interrupts = logging_enabled && 0;
+		constexpr bool log_io = logging_enabled && 0;
 	}
 
 	constexpr std::array<u8, 256> instr_len = {

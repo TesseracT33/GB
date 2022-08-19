@@ -1,9 +1,7 @@
 export module Cartridge;
 
 import System;
-
-import NumericalTypes;
-import SerializationStream;
+import Util;
 
 import <algorithm>;
 import <array>;

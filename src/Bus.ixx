@@ -1,7 +1,6 @@
 export module Bus;
 
-import NumericalTypes;
-import SerializationStream;
+import Util;
 
 import <array>;
 import <format>;

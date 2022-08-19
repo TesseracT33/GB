@@ -6,7 +6,6 @@ import DMA;
 import System;
 import Timer;
 import UserMessage;
-import Util;
 
 namespace CPU
 {

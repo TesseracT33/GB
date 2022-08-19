@@ -1,7 +1,6 @@
 export module PPU;
 
-import NumericalTypes;
-import SerializationStream;
+import Util;
 
 import <algorithm>;
 import <array>;
@@ -21,7 +20,7 @@ namespace PPU
 
 		using DmgPalette = std::array<RGB, 4>;
 
-		void Initialize();
+		void Initialize(bool hle_boot_rom);
 		u8 ReadBCPD();
 		u8 ReadBCPS();
 		u8 ReadBGP();
